@@ -41,6 +41,10 @@ app.whenReady().then(() => {
       })`);
       console.log('BASE ' + JSON.stringify(base));
 
+      // Reset persisted preferences so the run starts from known defaults.
+      await run(`window.__bliss.resetPrefs && window.__bliss.resetPrefs()`);
+      await wait(100);
+
       // Open a React app (Notepad) and an Angular app (Calculator) + File Explorer.
       await run(`window.__bliss.open('notepad')`);
       await run(`window.__bliss.open('calculator')`);
@@ -191,6 +195,49 @@ app.whenReady().then(() => {
       console.log('MINIMIZE ' + JSON.stringify({ midMin, afterMin }));
       console.log('RESTORE ' + JSON.stringify(afterRestore));
 
+      // --- v2 Phase D: Bliss Lab live controls -------------------------------
+      await run(`window.__bliss.open('bliss-lab')`);
+      await wait(500);
+      const labPresent = await run(`!!document.querySelector('[data-testid="bliss-lab"]')`);
+
+      // Control side: move the ✦ button to the left.
+      const sideBefore = await run(`!!document.querySelector('[data-appid="notepad"] .titlebar--left')`);
+      await run(`document.querySelector('[data-testid="lab-control-side"] [data-value="left"]').click()`);
+      await wait(200);
+      const sideAfter = await run(`!!document.querySelector('[data-appid="notepad"] .titlebar--left')`);
+
+      // Glass mode: toggle on -> window gets the glass class.
+      await run(`document.querySelector('[data-testid="lab-glass"]').click()`);
+      await wait(150);
+      const glassOn = await run(`!!document.querySelector('[data-appid="notepad"] .window--glass')`);
+
+      // Default opacity: set to 60% then open a fresh app -> inherits 0.6.
+      await run(`(() => {
+        const s = document.querySelector('[data-testid="lab-default-opacity"]');
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(s, '60');
+        s.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`);
+      await wait(120);
+      await run(`window.__bliss.open('ai-coder')`);
+      await wait(250);
+      const newOpacity = await run(`window.__bliss.windows().find(w => w.appId === 'ai-coder').opacity`);
+
+      // Demo toggle: hide desktop icons.
+      const iconsBefore = await run(`!!document.querySelector('[data-testid="desktop-icons"]')`);
+      await run(`document.querySelector('[data-testid="lab-show-icons"]').click()`);
+      await wait(150);
+      const iconsAfter = await run(`!!document.querySelector('[data-testid="desktop-icons"]')`);
+
+      // Reset Demo Layout: re-cascades windows (notepad was docked to x:0 earlier).
+      await run(`document.querySelector('[data-testid="lab-reset-layout"]').click()`);
+      await wait(150);
+      const notepadX = await run(`window.__bliss.windows().find(w => w.appId === 'notepad').x`);
+
+      console.log('BLISS_LAB ' + JSON.stringify({
+        labPresent, sideBefore, sideAfter, glassOn, newOpacity, iconsBefore, iconsAfter, notepadX,
+      }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -204,6 +251,9 @@ app.whenReady().then(() => {
         midMin.status === 'minimizing' && midMin.minimized === false && midMin.domPresent === true &&
         afterMin.minimized === true && afterMin.domPresent === false &&
         afterRestore.minimized === false && afterRestore.domPresent === true &&
+        labPresent === true && sideBefore === false && sideAfter === true &&
+        glassOn === true && Math.abs(newOpacity - 0.6) < 0.01 &&
+        iconsBefore === true && iconsAfter === false && notepadX >= 120 &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);

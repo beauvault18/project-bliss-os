@@ -19,24 +19,31 @@ apps (Calculator, File Explorer, zoneless/JIT).
 - Animated portal menu: **Dock Left / Right**, **Fullscreen**, **Minimize**, **Close Window**, **Quit App**, **Transparency** slider.
 - **Close vs Quit**: closing keeps the app *running* (glowing taskbar dot); quitting clears it.
 
-## ⏭️ Phase C — Minimize / close animations (next)
-Replace instant minimize with a real effect — **genie** (fold into taskbar) or
-**somersault** (flip into icon). Reserve true mesh-vertex wobble for this
-non-interactive moment. Add a `minimizeStyle` to preferences so Bliss Lab can swap it.
+## ✅ Phase C — Genie minimize / restore (done)
+Window collapses toward its taskbar button on minimize and expands back on
+restore. State machine commits `minimized` only on `onRest`. Modular preset
+registry (`animationPresets.ts`).
 
-## Phase D — Maximize physics + Settings
-Rubber-band maximize (corners overshoot, snap) and un-maximize "bend down from
-top". Real **Settings** app: window-controls **handedness** (left/right moves the
-✦ button), default wobble strength, snap distance, theme.
+## ✅ Phase D — Bliss Lab controls (done)
+Real live control panel ([BlissLabApp.tsx](../src/apps/react/BlissLabApp.tsx)) +
+persisted `preferencesStore`. Wired live: minimize/restore preset, wobble
+strength/speed, snap strength, default opacity, glass mode, **window control side
+(moves the ✦ button)**, animation speed, dramatic mode, demo toggles (show icons /
+taskbar dots / animation labels), Reset Demo Layout, Reset All Settings.
 
-## Phase E — Living background
-Parallax particle / depth-layer background ("Parallax Space Desktop") reacting to
-the mouse; later upgrade to webcam face-tracking. No camera work yet.
+## ⏭️ Phase E1 — Fire Close / Fire Quit (next)
+A burn-up close animation as a **new preset** (close-animation slot), selectable
+in Bliss Lab. The preset system is the seam — no hardcoding.
 
-## Phase F — Bliss Lab playground
-Live-tweak panel: minimize style · close animation · taskbar style · icon style ·
-wobble strength · transparency · titlebar layout · Start-menu style · background.
-This is the "redesign your own desktop" core.
+## Phase E2 — Somersault token minimize
+Flip-into-icon minimize as another preset.
+
+## Phase F — Parallax particle desktop
+Depth-layer particle background reacting to the mouse; later webcam face-tracking.
+
+## Later
+Maximize rubber-band physics · real Settings app · Alt-Tab / Mission Control ·
+desktop cube · AI Coder mock panel.
 
 ## Explicitly later (product/backend, not prototype)
 AI agents, real app mounting, Wayland/compositor, filesystem indexing, face

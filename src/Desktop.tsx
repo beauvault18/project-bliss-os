@@ -53,6 +53,8 @@ export function Desktop() {
       restoreAnimated: (id: string, appId: string) => animatedRestore(id, appId),
       animStatus: (id: string) =>
         useWindowAnimationStore.getState().anims[id]?.status ?? null,
+      prefs: () => usePreferencesStore.getState(),
+      resetPrefs: () => usePreferencesStore.getState().reset(),
       windows: () => s().windows,
       running: () => Object.keys(s().running),
     };

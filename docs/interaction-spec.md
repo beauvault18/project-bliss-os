@@ -52,6 +52,15 @@ The single ✦ button (right of the titlebar) opens an animated popover:
 - **Close Window** = the visible window goes away, but the app is still "running" (dot persists). Reopening starts **fresh**.
 - **Quit App** = the app fully ends; its dot and all windows disappear.
 
+## Bliss Lab (Phase D — the control room)
+Open the **Bliss Lab** app to change desktop/window behavior **live** (settings
+persist via localStorage in `src/core/preferencesStore.ts`):
+- **Animation Presets:** minimize/restore preset (Genie active; Somersault/Gravity/Cube shown as "soon"), animation speed (slow/normal/fast), dramatic mode.
+- **Window Behavior:** wobble strength, wobble speed, snap strength.
+- **Desktop Feel:** default window opacity, glass mode.
+- **Controls:** window control side (Left/Right) — moves the ✦ button.
+- **Debug / Demo Tools:** show desktop icons, show taskbar dots, show animation labels, Reset Demo Layout, Reset All Settings.
+
 ## Apps
-- **React:** Notepad, Minesweeper. **Angular (zoneless):** Calculator, File Explorer.
-- **Stubs (later phases):** Settings, Bliss Lab, AI Coder — open a placeholder window today.
+- **React:** Notepad, Minesweeper, **Bliss Lab** (real control panel). **Angular (zoneless):** Calculator, File Explorer.
+- **Stubs (later phases):** Settings, AI Coder — open a placeholder window today.
