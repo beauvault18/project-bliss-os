@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber';
 import { Wallpaper } from './Wallpaper';
+import { ParticleField } from './ParticleField';
 import { WindowLayer } from './WindowLayer';
 
 /**
@@ -19,6 +20,7 @@ export function DesktopScene() {
       <ambientLight intensity={0.9} />
       <directionalLight position={[4, 8, 6]} intensity={0.5} />
       <Wallpaper />
+      <ParticleField />
       <WindowLayer />
     </Canvas>
   );

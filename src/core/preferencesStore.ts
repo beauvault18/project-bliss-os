@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 
 export type ControlSide = 'left' | 'right';
 export type AnimationSpeed = 'slow' | 'normal' | 'fast';
+export type ParticleDensity = 'low' | 'medium' | 'high';
+export type ParticleSpeed = 'slow' | 'normal' | 'fast';
 
 export interface Preferences {
   // Animation presets
@@ -21,6 +23,12 @@ export interface Preferences {
   controlSide: ControlSide;
   // Close/quit
   fireEffects: boolean; // burn animation on close/quit
+  // Living Parallax Desktop
+  parallaxEnabled: boolean;
+  parallaxStrength: number; // 0–100
+  particleDensity: ParticleDensity;
+  particleSpeed: ParticleSpeed;
+  hackerMode: boolean;
   // Demo tools
   showDesktopIcons: boolean;
   showTaskbarDots: boolean;
@@ -39,6 +47,11 @@ const DEFAULTS: Preferences = {
   glassMode: false,
   controlSide: 'right',
   fireEffects: true,
+  parallaxEnabled: true,
+  parallaxStrength: 50,
+  particleDensity: 'medium',
+  particleSpeed: 'normal',
+  hackerMode: false,
   showDesktopIcons: true,
   showTaskbarDots: true,
   showAnimationDebug: false,
