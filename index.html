@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      'unsafe-eval' is required because Angular runs in JIT mode and compiles
+      templates at runtime via new Function(). If you switch Angular to AOT,
+      you can drop 'unsafe-eval'. See README for the tradeoff.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    />
+    <title>Hello World — Electron + Angular + React</title>
+  </head>
+  <body>
+    <main id="app">
+      <h1>Hello World 👋</h1>
+      <p class="subtitle">One Electron window, two UI frameworks.</p>
+      <div class="panels">
+        <!-- React mounts here -->
+        <div id="react-root"></div>
+        <!-- Angular bootstraps into this custom element -->
+        <app-root></app-root>
+      </div>
+    </main>
+    <script type="module" src="/src/renderer.ts"></script>
+  </body>
+</html>
