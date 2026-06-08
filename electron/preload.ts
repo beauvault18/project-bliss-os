@@ -1,4 +1,4 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 
 // Minimal, safe bridge. Extend this to expose IPC channels to the renderer.
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -8,4 +8,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     chrome: process.versions.chrome,
     node: process.versions.node,
   },
+  // Full-screen demo mode. Returns the resulting fullscreen state.
+  toggleFullscreen: (): Promise<boolean> =>
+    ipcRenderer.invoke('window:toggle-fullscreen'),
+  setFullscreen: (value: boolean): Promise<boolean> =>
+    ipcRenderer.invoke('window:set-fullscreen', value),
+  isFullscreen: (): Promise<boolean> =>
+    ipcRenderer.invoke('window:is-fullscreen'),
 });
