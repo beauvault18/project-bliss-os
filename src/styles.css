@@ -508,6 +508,32 @@ body {
   pointer-events: none;
 }
 
+/* ----------------------- Fire close / quit ------------------------------- */
+.fire-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 8px;
+  z-index: 6;
+}
+.fire-char {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+.fire-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.fire-ember {
+  position: absolute;
+  border-radius: 50%;
+}
+
 /* ----------------------------- Bliss Lab --------------------------------- */
 .lab {
   height: 100%;

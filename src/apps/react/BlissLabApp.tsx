@@ -271,6 +271,13 @@ export function BlissLabApp() {
       </Section>
 
       <Section title="Debug / Demo Tools">
+        <Row label="Fire close effects">
+          <Toggle
+            testid="lab-fire"
+            checked={p.fireEffects}
+            onChange={(v) => update({ fireEffects: v })}
+          />
+        </Row>
         <Row label="Show desktop icons">
           <Toggle
             testid="lab-show-icons"

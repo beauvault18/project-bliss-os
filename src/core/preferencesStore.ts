@@ -19,6 +19,8 @@ export interface Preferences {
   glassMode: boolean;
   // Controls
   controlSide: ControlSide;
+  // Close/quit
+  fireEffects: boolean; // burn animation on close/quit
   // Demo tools
   showDesktopIcons: boolean;
   showTaskbarDots: boolean;
@@ -36,6 +38,7 @@ const DEFAULTS: Preferences = {
   defaultOpacity: 1,
   glassMode: false,
   controlSide: 'right',
+  fireEffects: true,
   showDesktopIcons: true,
   showTaskbarDots: true,
   showAnimationDebug: false,

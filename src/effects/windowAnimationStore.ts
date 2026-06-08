@@ -1,21 +1,30 @@
 import { create } from 'zustand';
 import { useWindowStore } from '../core/windowStore';
 import { usePreferencesStore } from '../core/preferencesStore';
-import { DEFAULT_MINIMIZE_PRESET } from '../core/animationPresets';
+import {
+  DEFAULT_MINIMIZE_PRESET,
+  CLOSE_PRESET,
+  QUIT_PRESET,
+} from '../core/animationPresets';
 import type { Rect } from './minimizeEffects';
 
-export type AnimStatus = 'minimizing' | 'restoring';
+export type AnimStatus = 'minimizing' | 'restoring' | 'closing' | 'quitting';
 
 export interface WindowAnim {
   status: AnimStatus;
-  target: Rect;
   presetId: string;
+  /** Genie target (minimize/restore only). */
+  target?: Rect;
+  /** App id (close/quit only — needed to quit the app). */
+  appId?: string;
 }
 
 interface AnimStore {
   anims: Record<string, WindowAnim>;
   startMinimize: (id: string, target: Rect, presetId: string) => void;
   startRestore: (id: string, target: Rect, presetId: string) => void;
+  startClose: (id: string, appId: string, presetId: string) => void;
+  startQuit: (id: string, appId: string, presetId: string) => void;
   clear: (id: string) => void;
 }
 
@@ -28,6 +37,14 @@ export const useWindowAnimationStore = create<AnimStore>((set) => ({
   startRestore: (id, target, presetId) =>
     set((s) => ({
       anims: { ...s.anims, [id]: { status: 'restoring', target, presetId } },
+    })),
+  startClose: (id, appId, presetId) =>
+    set((s) => ({
+      anims: { ...s.anims, [id]: { status: 'closing', appId, presetId } },
+    })),
+  startQuit: (id, appId, presetId) =>
+    set((s) => ({
+      anims: { ...s.anims, [id]: { status: 'quitting', appId, presetId } },
     })),
   clear: (id) =>
     set((s) => {
@@ -81,4 +98,27 @@ export function animatedRestore(
     .getState()
     .startRestore(id, taskbarTarget(appId), presetId);
   useWindowStore.getState().focus(id); // un-minimizes, focuses, raises z-order
+}
+
+/**
+ * Close a window with the ember burn — the app stays running. The window is
+ * removed only when the burn finishes (committed in WindowView's onRest).
+ */
+export function animatedClose(id: string, appId: string): void {
+  if (useWindowAnimationStore.getState().anims[id]) return;
+  if (!usePreferencesStore.getState().fireEffects) {
+    useWindowStore.getState().closeWindow(id);
+    return;
+  }
+  useWindowAnimationStore.getState().startClose(id, appId, CLOSE_PRESET);
+}
+
+/** Quit an app with the dramatic fire burn — clears the running indicator. */
+export function animatedQuit(id: string, appId: string): void {
+  if (useWindowAnimationStore.getState().anims[id]) return;
+  if (!usePreferencesStore.getState().fireEffects) {
+    useWindowStore.getState().quitApp(appId);
+    return;
+  }
+  useWindowAnimationStore.getState().startQuit(id, appId, QUIT_PRESET);
 }

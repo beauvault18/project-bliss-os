@@ -7,10 +7,11 @@ import type { WindowState } from '../core/types';
 import { useWindowStore } from '../core/windowStore';
 import { getApp } from '../core/appRegistry';
 import { magneticSnap } from '../core/snapping';
-import { getMinimizePreset } from '../core/animationPresets';
+import { getMinimizePreset, getClosePreset } from '../core/animationPresets';
 import { usePreferencesStore, animSpeedFactor } from '../core/preferencesStore';
 import { useWindowAnimationStore } from '../effects/windowAnimationStore';
 import { computeGenieGeometry } from '../effects/minimizeEffects';
+import { FireCloseOverlay } from '../effects/FireCloseOverlay';
 import { Titlebar } from './Titlebar';
 import { ReactWindowHost } from '../framework-bridges/ReactWindowHost';
 import { AngularWindowHost } from '../framework-bridges/AngularWindowHost';
@@ -39,10 +40,12 @@ export function WindowView({ win }: { win: WindowState }) {
   const wobbleTension = 320 * (0.5 + wobbleSpeed / 100);
   const speedFactor = animSpeedFactor(animationSpeed);
 
-  // Minimize/restore animation status for this window.
+  // Minimize/restore/close animation status for this window.
   const anim = useWindowAnimationStore((s) => s.anims[win.id]);
   const animStatus = anim?.status;
+  const isClosing = animStatus === 'closing' || animStatus === 'quitting';
   const preset = getMinimizePreset(anim?.presetId ?? 'genie');
+  const closePreset = isClosing ? getClosePreset(anim!.presetId) : null;
 
   // Window center in world units (ortho, 1 unit == 1 px, +y up, origin center).
   const wx = win.x + win.w / 2 - width / 2;
@@ -66,7 +69,7 @@ export function WindowView({ win }: { win: WindowState }) {
 
   const geo = useMemo(
     () =>
-      anim
+      anim?.target
         ? computeGenieGeometry(
             { x: win.x, y: win.y, w: win.w, h: win.h },
             anim.target,
@@ -103,6 +106,22 @@ export function WindowView({ win }: { win: WindowState }) {
           if (useWindowAnimationStore.getState().anims[win.id]?.status === 'restoring') {
             useWindowAnimationStore.getState().clear(win.id);
           }
+        },
+      });
+    } else if (animStatus === 'closing' || animStatus === 'quitting') {
+      // Burn down, then finalize. The window only leaves once the burn ends.
+      progressApi.set({ progress: 1 });
+      progressApi.start({
+        progress: 0,
+        config: scaleCfg(closePreset?.config ?? { tension: 90, friction: 20 }),
+        onRest: () => {
+          const a = useWindowAnimationStore.getState().anims[win.id];
+          if (a?.status === 'closing') {
+            useWindowStore.getState().closeWindow(win.id);
+          } else if (a?.status === 'quitting') {
+            useWindowStore.getState().quitApp(a.appId ?? win.appId);
+          }
+          useWindowAnimationStore.getState().clear(win.id);
         },
       });
     } else {
@@ -155,10 +174,14 @@ export function WindowView({ win }: { win: WindowState }) {
 
   const interactive = !anim; // disable input while collapsing/expanding
 
+  // Wrapper style: close/quit burn when closing, otherwise the genie transform.
+  const wrapStyleFor = (p: number) =>
+    closePreset ? closePreset.style(p, dramatic) : preset.style(p, geo);
+
   return (
     <group position={[wx, wy, win.z]}>
       <Html center zIndexRange={[win.z, win.z]} style={{ pointerEvents: 'none' }} prepend>
-        {/* Genie wrapper: minimize/restore transform, clip, opacity. */}
+        {/* Genie wrapper: minimize/restore transform, or close/quit burn. */}
         <animated.div
           className="window-genie"
           data-testid="window"
@@ -167,11 +190,12 @@ export function WindowView({ win }: { win: WindowState }) {
             width: win.w,
             height: win.h,
             pointerEvents: 'auto',
-            transform: progress.to((p) => preset.style(p, geo).transform as string),
-            transformOrigin: '50% 50%',
-            opacity: progress.to((p) => preset.style(p, geo).opacity as number),
-            clipPath: progress.to((p) => preset.style(p, geo).clipPath as string),
-            borderRadius: progress.to((p) => preset.style(p, geo).borderRadius as string),
+            transform: progress.to((p) => wrapStyleFor(p).transform as string),
+            transformOrigin: closePreset ? '50% 0%' : '50% 50%',
+            opacity: progress.to((p) => wrapStyleFor(p).opacity as number),
+            clipPath: progress.to((p) => wrapStyleFor(p).clipPath as string),
+            borderRadius: progress.to((p) => wrapStyleFor(p).borderRadius as string),
+            filter: progress.to((p) => (wrapStyleFor(p).filter as string) ?? 'none'),
           }}
         >
           {showDebug && anim && (
@@ -204,6 +228,13 @@ export function WindowView({ win }: { win: WindowState }) {
               ) : null}
             </div>
           </animated.div>
+          {closePreset && (
+            <FireCloseOverlay
+              progress={progress}
+              preset={closePreset}
+              dramatic={dramatic}
+            />
+          )}
         </animated.div>
       </Html>
     </group>

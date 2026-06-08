@@ -50,6 +50,7 @@ export const genieStyle: MinimizeStyle = (progress, geo): CSSProperties => {
     opacity: lerp(1, 0.15, t),
     clipPath,
     borderRadius: `${lerp(8, 22, t)}px`,
+    filter: 'none',
     willChange: 'transform, clip-path, opacity',
   };
 };

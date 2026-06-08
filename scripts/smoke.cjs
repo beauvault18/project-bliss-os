@@ -238,6 +238,51 @@ app.whenReady().then(() => {
         labPresent, sideBefore, sideAfter, glassOn, newOpacity, iconsBefore, iconsAfter, notepadX,
       }));
 
+      // --- v2 Phase E1: Fire Close (ember) vs Fire Quit (fire) ---------------
+      await run(`window.__bliss.open('minesweeper')`);
+      await wait(300);
+      // Close Window -> ember burn; the app must STAY running.
+      await run(`document.querySelector('[data-appid="minesweeper"] [data-testid="rapid-btn"]').click()`);
+      await wait(220);
+      await run(`document.querySelector('[data-testid="rcm-close-window"]').click()`);
+      await wait(90);
+      const closeMid = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'minesweeper');
+        return {
+          status: w ? window.__bliss.animStatus(w.id) : null,
+          domPresent: !!document.querySelector('[data-testid="window"][data-appid="minesweeper"]'),
+          overlay: !!document.querySelector('[data-appid="minesweeper"] [data-testid="fire-overlay"]'),
+          running: window.__bliss.running().includes('minesweeper'),
+        };
+      })()`);
+      await wait(1500);
+      const afterCloseAnim = await run(`({
+        inWindows: window.__bliss.windows().some(w => w.appId === 'minesweeper'),
+        running: window.__bliss.running().includes('minesweeper'),
+      })`);
+
+      // Reopen, then Quit App -> fire burn; running indicator must clear.
+      await run(`window.__bliss.open('minesweeper')`);
+      await wait(300);
+      await run(`document.querySelector('[data-appid="minesweeper"] [data-testid="rapid-btn"]').click()`);
+      await wait(220);
+      await run(`document.querySelector('[data-testid="rcm-quit-app"]').click()`);
+      await wait(90);
+      const quitMid = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'minesweeper');
+        return {
+          status: w ? window.__bliss.animStatus(w.id) : null,
+          overlay: !!document.querySelector('[data-appid="minesweeper"] [data-testid="fire-overlay"]'),
+        };
+      })()`);
+      await wait(1600);
+      const afterQuitAnim = await run(`({
+        inWindows: window.__bliss.windows().some(w => w.appId === 'minesweeper'),
+        running: window.__bliss.running().includes('minesweeper'),
+      })`);
+      console.log('FIRE_CLOSE ' + JSON.stringify({ closeMid, afterCloseAnim }));
+      console.log('FIRE_QUIT ' + JSON.stringify({ quitMid, afterQuitAnim }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -254,6 +299,11 @@ app.whenReady().then(() => {
         labPresent === true && sideBefore === false && sideAfter === true &&
         glassOn === true && Math.abs(newOpacity - 0.6) < 0.01 &&
         iconsBefore === true && iconsAfter === false && notepadX >= 120 &&
+        closeMid.status === 'closing' && closeMid.domPresent === true &&
+        closeMid.overlay === true && closeMid.running === true &&
+        afterCloseAnim.inWindows === false && afterCloseAnim.running === true &&
+        quitMid.status === 'quitting' && quitMid.overlay === true &&
+        afterQuitAnim.inWindows === false && afterQuitAnim.running === false &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);
@@ -264,4 +314,4 @@ app.whenReady().then(() => {
     }
   });
 });
-setTimeout(() => { console.log('HARD_TIMEOUT'); console.log('ERRORS ' + JSON.stringify(errors)); app.exit(9); }, 45000);
+setTimeout(() => { console.log('HARD_TIMEOUT'); console.log('ERRORS ' + JSON.stringify(errors)); app.exit(9); }, 60000);
