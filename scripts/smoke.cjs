@@ -9,12 +9,13 @@ app.commandLine.appendSwitch('use-gl', 'angle');
 app.commandLine.appendSwitch('use-angle', 'swiftshader');
 
 const errors = [];
+const ROOT = path.join(__dirname, '..');
 
 app.whenReady().then(() => {
   const win = new BrowserWindow({
     show: false,
     width: 1280, height: 800,
-    webPreferences: { preload: path.resolve('dist-electron/preload.js'), contextIsolation: true, nodeIntegration: false },
+    webPreferences: { preload: path.join(ROOT, 'dist-electron', 'preload.js'), contextIsolation: true, nodeIntegration: false },
   });
   win.webContents.on('console-message', (...a) => {
     const ev = a[0];
@@ -27,7 +28,7 @@ app.whenReady().then(() => {
   const run = (code) => win.webContents.executeJavaScript(code);
   const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-  win.loadFile('dist/index.html');
+  win.loadFile(path.join(ROOT, 'dist', 'index.html'));
   win.webContents.on('did-finish-load', async () => {
     try {
       await wait(1200); // let R3F canvas + first paint settle
