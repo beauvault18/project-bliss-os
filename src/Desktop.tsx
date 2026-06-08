@@ -5,8 +5,10 @@ import { DesktopIcons } from './shell/DesktopIcons';
 import { DesktopProcessTokens } from './shell/DesktopProcessTokens';
 import { Taskbar } from './shell/Taskbar';
 import { StartMenu } from './shell/StartMenu';
+import { WindowOverview } from './shell/WindowOverview';
 import { useWindowStore } from './core/windowStore';
 import { usePreferencesStore } from './core/preferencesStore';
+import { useOverviewStore } from './core/overviewStore';
 import {
   useWindowAnimationStore,
   animatedMinimize,
@@ -22,6 +24,38 @@ export function Desktop() {
   // only exits fullscreen when nothing else needs to close.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const ov = useOverviewStore.getState();
+
+      // Ctrl/Cmd+Space toggles the cinematic window overview.
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Space') {
+        e.preventDefault();
+        ov.toggle();
+        return;
+      }
+
+      // While overview is open it owns the keyboard.
+      if (ov.active) {
+        const vis = useWindowStore.getState().windows.filter((w) => !w.minimized);
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          ov.close();
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const w = vis[ov.selectedIndex];
+          if (w) {
+            ov.close();
+            useWindowStore.getState().focus(w.id);
+          }
+        } else if (e.key.startsWith('Arrow')) {
+          e.preventDefault();
+          const delta =
+            e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
+          ov.moveSelection(delta, vis.length);
+        }
+        return;
+      }
+
       if (e.key === 'F11') {
         e.preventDefault();
         void window.electronAPI?.toggleFullscreen();
@@ -59,6 +93,9 @@ export function Desktop() {
       setPrefs: (patch: Record<string, unknown>) =>
         usePreferencesStore.getState().update(patch as never),
       resetPrefs: () => usePreferencesStore.getState().reset(),
+      openOverview: () => useOverviewStore.getState().open(),
+      closeOverview: () => useOverviewStore.getState().close(),
+      overviewActive: () => useOverviewStore.getState().active,
       windows: () => s().windows,
       running: () => Object.keys(s().running),
     };
@@ -70,6 +107,7 @@ export function Desktop() {
       <LivingParallaxDesktop />
       {showDesktopIcons && <DesktopIcons />}
       <DesktopProcessTokens />
+      <WindowOverview />
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}
       <Taskbar
         startOpen={startOpen}

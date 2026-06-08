@@ -160,6 +160,38 @@ export function WindowView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animStatus]);
 
+  // Overview (Mission Control): visually transform the window into its grid slot.
+  // This NEVER changes the window's real x/y/w/h — it's a pure spring on top.
+  const [{ ovx, ovy, ovs, ovlift }, ovApi] = useSpring(() => ({
+    ovx: 0,
+    ovy: 0,
+    ovs: 1,
+    ovlift: 0,
+  }));
+  useEffect(() => {
+    const cfg = OVERVIEW_MOTION[overviewMotion];
+    if (overview && slot) {
+      ovApi.start({
+        ovx: slot.cx - (win.x + win.w / 2),
+        ovy: slot.cy - (win.y + win.h / 2),
+        ovs: slot.scale,
+        config: cfg,
+      });
+    } else {
+      ovApi.start({ ovx: 0, ovy: 0, ovs: 1, ovlift: 0, config: cfg });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overview, slot?.cx, slot?.cy, slot?.scale, win.x, win.y, win.w, win.h, overviewMotion]);
+  useEffect(() => {
+    ovApi.start({ ovlift: overview && selected ? 0.06 : 0 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [overview, selected]);
+
+  const pickFromOverview = () => {
+    closeOverview();
+    focus(win.id); // selected window flies to its real position, on top
+  };
+
   const bind = useDrag(
     ({ first, last, down, delta: [dx, dy], velocity: [vx, vy], direction: [dirX, dirY] }) => {
       if (first) focus(win.id);
@@ -208,47 +240,66 @@ export function WindowView({
   const wrapStyleFor = (p: number) =>
     closePreset ? closePreset.style(p, dramatic) : preset.style(p, geo);
 
+  const zBase = overview ? (selected ? 3000 : 1000 + index) : win.z;
+
   return (
     <group position={[wx, wy, win.z]}>
-      <Html center zIndexRange={[win.z, win.z]} style={{ pointerEvents: 'none' }} prepend>
-        {/* Genie wrapper: minimize/restore transform, or close/quit burn. */}
+      <Html center zIndexRange={[zBase, zBase]} style={{ pointerEvents: 'none' }} prepend>
+        {/* Overview wrapper: visual-only grid transform (never touches real x/y/w/h). */}
         <animated.div
-          className="window-genie"
+          className={`window-overview${overview ? ' is-overview' : ''}${overview && selected ? ' window-overview--selected' : ''}`}
           data-testid="window"
           data-appid={win.appId}
           style={{
             width: win.w,
             height: win.h,
-            pointerEvents: 'auto',
-            transform: progress.to((p) => wrapStyleFor(p).transform as string),
-            transformOrigin: closePreset ? '50% 0%' : '50% 50%',
-            opacity: progress.to((p) => wrapStyleFor(p).opacity as number),
-            clipPath: progress.to((p) => wrapStyleFor(p).clipPath as string),
-            borderRadius: progress.to((p) => wrapStyleFor(p).borderRadius as string),
-            filter: progress.to((p) => (wrapStyleFor(p).filter as string) ?? 'none'),
+            pointerEvents: overview ? 'auto' : 'none',
+            cursor: overview ? 'pointer' : undefined,
+            transformOrigin: '50% 50%',
+            transform: to(
+              [ovx, ovy, ovs, ovlift],
+              (x, y, s, l) => `translate(${x}px, ${y}px) scale(${s * (1 + l)})`,
+            ),
           }}
+          onMouseEnter={overview ? () => setSelectedIndex(index) : undefined}
+          onClick={overview ? pickFromOverview : undefined}
         >
-          {showDebug && anim && (
-            <span className="window-debug" data-testid="anim-debug">
-              {anim.status} · {anim.presetId}
-            </span>
-          )}
-          {/* Inner window: existing wobble + transparency, unchanged. */}
+          {/* Genie wrapper: minimize/restore transform, or close/quit burn. */}
           <animated.div
-            className={`window${win.focused ? ' window--focused' : ''}${glass ? ' window--glass' : ''}`}
+            className="window-genie"
             style={{
               width: '100%',
               height: '100%',
-              opacity: win.opacity,
-              pointerEvents: interactive ? 'auto' : 'none',
-              transformOrigin: '50% 0%',
-              transform: to(
-                [styles.skewX, styles.skewY, styles.scaleX, styles.scaleY],
-                (kx, ky, sx, sy) => `skew(${kx}deg, ${ky}deg) scale(${sx}, ${sy})`,
-              ),
+              pointerEvents: overview ? 'none' : 'auto',
+              transform: progress.to((p) => wrapStyleFor(p).transform as string),
+              transformOrigin: closePreset ? '50% 0%' : '50% 50%',
+              opacity: progress.to((p) => wrapStyleFor(p).opacity as number),
+              clipPath: progress.to((p) => wrapStyleFor(p).clipPath as string),
+              borderRadius: progress.to((p) => wrapStyleFor(p).borderRadius as string),
+              filter: progress.to((p) => (wrapStyleFor(p).filter as string) ?? 'none'),
             }}
-            onPointerDown={() => focus(win.id)}
           >
+            {showDebug && anim && (
+              <span className="window-debug" data-testid="anim-debug">
+                {anim.status} · {anim.presetId}
+              </span>
+            )}
+            {/* Inner window: existing wobble + transparency, unchanged. */}
+            <animated.div
+              className={`window${win.focused ? ' window--focused' : ''}${glass ? ' window--glass' : ''}`}
+              style={{
+                width: '100%',
+                height: '100%',
+                opacity: win.opacity,
+                pointerEvents: overview || !interactive ? 'none' : 'auto',
+                transformOrigin: '50% 0%',
+                transform: to(
+                  [styles.skewX, styles.skewY, styles.scaleX, styles.scaleY],
+                  (kx, ky, sx, sy) => `skew(${kx}deg, ${ky}deg) scale(${sx}, ${sy})`,
+                ),
+              }}
+              onPointerDown={() => focus(win.id)}
+            >
             <Titlebar win={win} bind={bind() as Record<string, unknown>} />
             <div className="window__body">
               {app?.body.framework === 'react' ? (
@@ -258,12 +309,19 @@ export function WindowView({
               ) : null}
             </div>
           </animated.div>
-          {closePreset && (
-            <FireCloseOverlay
-              progress={progress}
-              preset={closePreset}
-              dramatic={dramatic}
-            />
+            {closePreset && (
+              <FireCloseOverlay
+                progress={progress}
+                preset={closePreset}
+                dramatic={dramatic}
+              />
+            )}
+          </animated.div>
+          {overview && overviewLabels && (
+            <div className="window-ov-label" data-testid="ov-label">
+              <span aria-hidden>{app?.icon}</span>
+              {win.title}
+            </div>
           )}
         </animated.div>
       </Html>

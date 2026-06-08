@@ -308,6 +308,38 @@ export function BlissLabApp() {
         </Row>
       </Section>
 
+      <Section title="Window Switcher">
+        <Row label="Motion intensity">
+          <Segmented<'low' | 'normal' | 'high'>
+            testid="lab-overview-motion"
+            value={p.overviewMotion}
+            options={[
+              { value: 'low', label: 'Low' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'high', label: 'High' },
+            ]}
+            onChange={(v) => update({ overviewMotion: v })}
+          />
+        </Row>
+        <Row label="Background dim">
+          <Slider
+            testid="lab-overview-dim"
+            value={p.overviewDim}
+            min={0}
+            max={80}
+            suffix="%"
+            onChange={(v) => update({ overviewDim: v })}
+          />
+        </Row>
+        <Row label="Show app labels">
+          <Toggle
+            testid="lab-overview-labels"
+            checked={p.overviewLabels}
+            onChange={(v) => update({ overviewLabels: v })}
+          />
+        </Row>
+      </Section>
+
       <Section title="Controls">
         <Row label="Window control side">
           <Segmented<ControlSide>
