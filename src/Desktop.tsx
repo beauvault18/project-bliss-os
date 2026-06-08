@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { DesktopScene } from './scene/DesktopScene';
 import { DesktopIcons } from './shell/DesktopIcons';
+import { DesktopProcessTokens } from './shell/DesktopProcessTokens';
 import { Taskbar } from './shell/Taskbar';
 import { StartMenu } from './shell/StartMenu';
 import { useWindowStore } from './core/windowStore';
@@ -54,6 +55,8 @@ export function Desktop() {
       animStatus: (id: string) =>
         useWindowAnimationStore.getState().anims[id]?.status ?? null,
       prefs: () => usePreferencesStore.getState(),
+      setPrefs: (patch: Record<string, unknown>) =>
+        usePreferencesStore.getState().update(patch as never),
       resetPrefs: () => usePreferencesStore.getState().reset(),
       windows: () => s().windows,
       running: () => Object.keys(s().running),
@@ -64,6 +67,7 @@ export function Desktop() {
     <div className="desktop">
       <DesktopScene />
       {showDesktopIcons && <DesktopIcons />}
+      <DesktopProcessTokens />
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}
       <Taskbar
         startOpen={startOpen}

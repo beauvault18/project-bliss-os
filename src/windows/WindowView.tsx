@@ -92,7 +92,14 @@ export function WindowView({ win }: { win: WindowState }) {
         onRest: () => {
           const a = useWindowAnimationStore.getState().anims[win.id];
           if (a?.status === 'minimizing') {
-            useWindowStore.getState().minimize(win.id);
+            const p = getMinimizePreset(a.presetId);
+            useWindowStore.getState().commitMinimize(win.id, {
+              presetId: a.presetId,
+              tokenPos:
+                p.landsOnDesktop && a.target
+                  ? { x: a.target.x, y: a.target.y }
+                  : undefined,
+            });
             useWindowAnimationStore.getState().clear(win.id);
           }
         },

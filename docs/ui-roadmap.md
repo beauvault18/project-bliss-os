@@ -40,10 +40,15 @@ Close/quit burn-down animations as modular close presets
 so the window leaves exactly when the burn ends; respects animation speed +
 dramatic mode; toggleable via the Bliss Lab "Fire close effects" switch.
 
-## ⏭️ Phase E2 — Somersault token minimize (next)
-Flip-into-icon minimize as another minimize preset, selectable in Bliss Lab.
+## ✅ Phase E2 — Somersault token minimize (done)
+`somersault-token` minimize preset (selectable in Bliss Lab): the window flips a
+full forward somersault and shrinks onto the desktop as a **live process token**
+([DesktopProcessTokens.tsx](../src/shell/DesktopProcessTokens.tsx),
+[somersaultEffects.ts](../src/effects/somersaultEffects.ts)). Double-click the
+token to restore. Tokens are derived from window state (`minimized && tokenPos`)
+so they can't desync; quitting removes both window and token.
 
-## Phase F — Parallax particle desktop
+## ⏭️ Phase F — Parallax particle desktop (next)
 Depth-layer particle background reacting to the mouse; later webcam face-tracking.
 
 ## Later

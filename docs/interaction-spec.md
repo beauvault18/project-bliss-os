@@ -38,15 +38,12 @@ The single ✦ button (right of the titlebar) opens an animated popover:
 - **Glowing dot** = running. Click focuses/restores; click the active app to minimize it.
 - Windowless running app → click re-opens a fresh window.
 
-## Minimize / Restore (Phase C — "genie")
-- **Minimize** (Rapid menu ▁, or click an active taskbar button) → the window
-  **collapses toward its taskbar button** with a genie effect (translate + shrink +
-  trapezoidal neck + fade). The window only becomes `minimized` **after** the
-  animation finishes — it never vanishes early.
-- **Restore** (click a minimized app's taskbar button) → the window **expands back
-  out** from the taskbar button, then becomes interactive again.
-- The animation system is modular: presets live in `src/core/animationPresets.ts`
-  (`genie` today; somersault / fire / gravity / cube are registered stubs for later).
+## Minimize / Restore (modular presets)
+Choose the minimize preset in Bliss Lab. The window only becomes `minimized`
+**after** the animation finishes — it never vanishes early.
+- **Genie** → collapses toward its **taskbar button**; restore by clicking that taskbar button.
+- **Somersault Token** → flips a full forward somersault and shrinks onto the **desktop as a live process token** (icon + name + pulsing "live" dot). **Double-click the token** to restore. The taskbar dot still works too.
+- Presets live in `src/core/animationPresets.ts` (`genie`, `somersault-token` active; gravity / cube are registered stubs). Tokens are derived from window state (`minimized && tokenPos`) so they never desync — closing/quitting the app removes the token.
 
 ## Close vs Quit (the key model + Fire animation)
 - **Close Window** → soft **Ember Close** burn (blue/orange ember line travels top→bottom, gentle fade). The visible window goes away, but the app is still "running" (dot persists). Reopening starts **fresh**.

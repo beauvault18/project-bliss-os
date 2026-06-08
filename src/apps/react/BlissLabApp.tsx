@@ -115,7 +115,7 @@ function Segmented<T extends string>({
 
 const PRESET_OPTIONS = [
   { id: 'genie', label: 'Genie' },
-  { id: 'somersault', label: 'Somersault' },
+  { id: 'somersault-token', label: 'Somersault Token' },
   { id: 'gravity', label: 'Gravity Drop' },
   { id: 'cube', label: 'Cube Flip' },
 ];

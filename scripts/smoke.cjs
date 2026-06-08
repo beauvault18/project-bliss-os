@@ -283,6 +283,51 @@ app.whenReady().then(() => {
       console.log('FIRE_CLOSE ' + JSON.stringify({ closeMid, afterCloseAnim }));
       console.log('FIRE_QUIT ' + JSON.stringify({ quitMid, afterQuitAnim }));
 
+      // --- v2 Phase E2: Somersault Token minimize ---------------------------
+      // Select the preset via the Bliss Lab picker (Bliss Lab is already open).
+      await run(`document.querySelector('[data-testid="lab-minimize-preset"] [data-preset="somersault-token"]').click()`);
+      await wait(150);
+      const presetSelected = await run(`window.__bliss.prefs().minimizePreset`);
+
+      const nid = await run(`(window.__bliss.windows().find(w => w.appId === 'notepad') || {}).id || null`);
+      // Minimize Notepad -> somersault onto the desktop as a token.
+      await run(`window.__bliss.minimizeAnimated(${JSON.stringify(nid)}, 'notepad')`);
+      await wait(1300);
+      const somerMin = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'notepad');
+        return {
+          minimized: w ? w.minimized : null,
+          hasToken: !!(w && w.tokenPos),
+          tokenDom: !!document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]'),
+          windowDom: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+          running: window.__bliss.running().includes('notepad'),
+        };
+      })()`);
+
+      // Double-click the token to restore.
+      await run(`document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
+      await wait(1300);
+      const somerRestore = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'notepad');
+        return {
+          minimized: w ? w.minimized : null,
+          tokenDom: !!document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]'),
+          windowDom: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+        };
+      })()`);
+
+      // Minimize again -> token; then Quit App should remove the token too.
+      await run(`window.__bliss.minimizeAnimated(${JSON.stringify(nid)}, 'notepad')`);
+      await wait(1300);
+      const tokenBeforeQuit = await run(`!!document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]')`);
+      await run(`window.__bliss.quitApp('notepad')`);
+      await wait(200);
+      const afterTokenQuit = await run(`({
+        tokenDom: !!document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]'),
+        running: window.__bliss.running().includes('notepad'),
+      })`);
+      console.log('SOMERSAULT ' + JSON.stringify({ presetSelected, somerMin, somerRestore, tokenBeforeQuit, afterTokenQuit }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -304,6 +349,12 @@ app.whenReady().then(() => {
         afterCloseAnim.inWindows === false && afterCloseAnim.running === true &&
         quitMid.status === 'quitting' && quitMid.overlay === true &&
         afterQuitAnim.inWindows === false && afterQuitAnim.running === false &&
+        presetSelected === 'somersault-token' &&
+        somerMin.minimized === true && somerMin.hasToken === true &&
+        somerMin.tokenDom === true && somerMin.windowDom === false && somerMin.running === true &&
+        somerRestore.minimized === false && somerRestore.tokenDom === false && somerRestore.windowDom === true &&
+        tokenBeforeQuit === true &&
+        afterTokenQuit.tokenDom === false && afterTokenQuit.running === false &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);
