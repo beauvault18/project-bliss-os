@@ -1,61 +1,65 @@
+import { useRef, useState } from 'react';
 import type { WindowState } from '../core/types';
 import { getApp } from '../core/appRegistry';
+import { useWindowStore } from '../core/windowStore';
+import { RapidControlMenu } from '../shell/RapidControlMenu';
+
+const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
 
 export function Titlebar({
   win,
   bind,
-  onClose,
-  onMinimize,
-  onMaximize,
 }: {
   win: WindowState;
   /** Spreadable gesture props from use-gesture's bind(). */
   bind: Record<string, unknown>;
-  onClose: () => void;
-  onMinimize: () => void;
-  onMaximize: () => void;
 }) {
   const app = getApp(win.appId);
-  const stop = (e: React.PointerEvent) => e.stopPropagation();
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [menu, setMenu] = useState<DOMRect | null>(null);
+
+  const toggleMenu = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (menu) {
+      setMenu(null);
+    } else if (btnRef.current) {
+      setMenu(btnRef.current.getBoundingClientRect());
+    }
+  };
 
   return (
     <div
       className={`titlebar${win.focused ? '' : ' titlebar--blurred'}`}
       {...bind}
-      onDoubleClick={onMaximize}
+      onDoubleClick={() =>
+        useWindowStore.getState().toggleMaximize(win.id, viewport())
+      }
       data-testid="titlebar"
     >
       <span className="titlebar__name">
         <span className="titlebar__icon">{app?.icon}</span>
         {win.title}
       </span>
-      <div className="titlebar__buttons">
-        <button
-          className="tb-btn tb-btn--min"
-          onPointerDown={stop}
-          onClick={onMinimize}
-          title="Minimize"
-        >
-          _
-        </button>
-        <button
-          className="tb-btn tb-btn--max"
-          onPointerDown={stop}
-          onClick={onMaximize}
-          title="Maximize"
-        >
-          ▢
-        </button>
-        <button
-          className="tb-btn tb-btn--close"
-          onPointerDown={stop}
-          onClick={onClose}
-          title="Close"
-          data-testid="close-btn"
-        >
-          ✕
-        </button>
-      </div>
+
+      <button
+        ref={btnRef}
+        className={`rapid-btn${menu ? ' rapid-btn--active' : ''}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={toggleMenu}
+        title="Rapid Control"
+        data-testid="rapid-btn"
+      >
+        ✦
+      </button>
+
+      {menu && (
+        <RapidControlMenu
+          win={win}
+          anchor={menu}
+          viewport={viewport()}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   );
 }

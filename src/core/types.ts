@@ -15,6 +15,7 @@ export interface WindowState {
   focused: boolean;
   minimized: boolean;
   maximized: boolean;
+  opacity: number; // 0.4 – 1, controlled by the Rapid Control transparency slider
   /** Pre-maximize rect, restored on un-maximize. */
   restore?: { x: number; y: number; w: number; h: number };
 }
@@ -36,4 +37,6 @@ export interface AppDef {
   icon: string; // emoji glyph for v1
   defaultSize: { w: number; h: number };
   body: ReactAppDef | AngularAppDef;
+  /** Show a launcher icon on the desktop. */
+  showOnDesktop?: boolean;
 }

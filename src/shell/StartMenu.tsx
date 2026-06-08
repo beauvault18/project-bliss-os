@@ -4,13 +4,13 @@ import { useWindowStore } from '../core/windowStore';
 
 export function StartMenu({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState('');
-  const open = useWindowStore((s) => s.open);
+  const openOrFocus = useWindowStore((s) => s.openOrFocus);
   const filtered = APPS.filter((a) =>
     a.title.toLowerCase().includes(q.toLowerCase()),
   );
 
   const launch = (id: string) => {
-    open(id);
+    openOrFocus(id);
     onClose();
   };
 

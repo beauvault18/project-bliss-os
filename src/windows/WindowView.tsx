@@ -90,6 +90,7 @@ export function WindowView({ win }: { win: WindowState }) {
           style={{
             width: win.w,
             height: win.h,
+            opacity: win.opacity,
             pointerEvents: 'auto',
             transformOrigin: '50% 0%',
             transform: to(
@@ -100,18 +101,7 @@ export function WindowView({ win }: { win: WindowState }) {
           }}
           onPointerDown={() => focus(win.id)}
         >
-          <Titlebar
-            win={win}
-            bind={bind() as Record<string, unknown>}
-            onClose={() => useWindowStore.getState().close(win.id)}
-            onMinimize={() => useWindowStore.getState().minimize(win.id)}
-            onMaximize={() =>
-              useWindowStore.getState().toggleMaximize(win.id, {
-                w: width,
-                h: height,
-              })
-            }
-          />
+          <Titlebar win={win} bind={bind() as Record<string, unknown>} />
           <div className="window__body">
             {app?.body.framework === 'react' ? (
               <ReactWindowHost
