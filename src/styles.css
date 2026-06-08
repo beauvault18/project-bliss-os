@@ -1,82 +1,311 @@
-:root {
-  color-scheme: light dark;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
 }
 
 body {
-  margin: 0;
-  padding: 2rem;
-  background: #0f172a;
-  color: #e2e8f0;
+  font-family: Tahoma, 'Segoe UI', sans-serif;
+  user-select: none;
+  background: #245edb;
 }
 
-#app {
-  max-width: 880px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-h1 {
-  font-size: 2.5rem;
-  margin: 0;
-}
-
-.subtitle {
-  color: #94a3b8;
-  margin-top: 0.25rem;
-}
-
-.panels {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-top: 2rem;
-}
-
-.panel {
+.desktop {
   position: relative;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 1.5rem;
+  height: 100%;
+  width: 100%;
+}
+
+/* ----------------------------- Windows ----------------------------------- */
+.window {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #0831d9;
+  border-radius: 8px 8px 2px 2px;
+  background: #ece9d8;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  will-change: transform;
+}
+.window--focused {
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 4px 0 8px;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+  cursor: grab;
+  background: linear-gradient(
+    180deg,
+    #0997ff 0%,
+    #0053ee 8%,
+    #0831d9 40%,
+    #0053ee 88%,
+    #003ad6 100%
+  );
+}
+.titlebar:active {
+  cursor: grabbing;
+}
+.titlebar--blurred {
+  background: linear-gradient(180deg, #7ba2e7 0%, #6079d0 50%, #5471c6 100%);
+}
+.titlebar__name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.titlebar__icon {
+  font-size: 0.95rem;
+}
+.titlebar__buttons {
+  display: flex;
+  gap: 2px;
+}
+.tb-btn {
+  width: 22px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  background: linear-gradient(180deg, #4a90f0, #1f5fd6);
+}
+.tb-btn:hover {
+  filter: brightness(1.15);
+}
+.tb-btn--close {
+  background: linear-gradient(180deg, #f08a6a, #d8401a);
+}
+.window__body {
+  flex: 1;
+  overflow: hidden;
+  background: #fff;
+  position: relative;
+}
+
+/* ----------------------------- Taskbar ----------------------------------- */
+.taskbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  z-index: 100000;
+  background: linear-gradient(
+    180deg,
+    #3168d5 0%,
+    #2459d4 9%,
+    #1941a5 18%,
+    #2459d4 92%,
+    #1c50c8 100%
+  );
+  border-top: 1px solid #1638a8;
+}
+
+.start-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 22px 4px 12px;
+  border: none;
+  color: #fff;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  border-radius: 0 12px 12px 0;
+  background: linear-gradient(180deg, #5eb84c 0%, #3c9a30 45%, #2f8025 100%);
+}
+.start-button:hover,
+.start-button--active {
+  filter: brightness(1.12);
+}
+.start-button__logo {
+  font-size: 1.1rem;
+  font-style: normal;
+}
+
+.taskbar__tasks {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  overflow: hidden;
+}
+.task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 160px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid #1c44ad;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  background: linear-gradient(180deg, #3f7ae0, #245bd0);
+}
+.task--active {
+  background: linear-gradient(180deg, #1b3f9e, #2a5ed0);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+.task__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tray {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #fff;
+  font-size: 0.8rem;
+  background: linear-gradient(180deg, #168ed6, #1376c4);
+  border-left: 1px solid #1c50c8;
+}
+.tray__clock {
+  font-weight: 600;
+}
+
+/* --------------------------- Start menu ---------------------------------- */
+.startmenu-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 100001;
+}
+.startmenu {
+  position: absolute;
+  left: 0;
+  bottom: 40px;
+  width: 340px;
+  z-index: 100002;
+  border: 1px solid #0831d9;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -6px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+.startmenu__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(180deg, #1f6fe0 0%, #0a3bc4 100%);
+}
+.startmenu__avatar {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  background: #cfe0ff;
+  border: 2px solid #fff;
+  border-radius: 6px;
+}
+.startmenu__body {
+  background: #fff;
+  padding: 8px;
+}
+.startmenu__search {
+  width: 100%;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border: 1px solid #7f9db9;
+  border-radius: 3px;
+  font: inherit;
+}
+.startmenu__apps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 280px;
+  overflow: auto;
+}
+.startmenu__apps button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 8px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 3px;
+  font: inherit;
   text-align: left;
 }
-
-.panel--react {
-  box-shadow: 0 0 0 1px rgba(97, 218, 251, 0.4);
+.startmenu__apps button:hover {
+  background: #2459d4;
+  color: #fff;
 }
-
-.panel--angular {
-  box-shadow: 0 0 0 1px rgba(221, 0, 49, 0.4);
+.startmenu__icon {
+  font-size: 1.3rem;
 }
-
-.badge {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+.startmenu__appname {
+  flex: 1;
+}
+.startmenu__badge {
+  font-size: 0.65rem;
   text-transform: uppercase;
-  padding: 0.2rem 0.5rem;
+  padding: 2px 6px;
   border-radius: 999px;
-  background: #334155;
-  color: #cbd5e1;
+  color: #fff;
 }
-
-.panel h2 {
-  margin: 0.75rem 0 0.5rem;
+.badge--react {
+  background: #1ea7c5;
 }
-
-button {
-  margin-top: 0.5rem;
-  padding: 0.5rem 1rem;
-  font-size: 0.95rem;
+.badge--angular {
+  background: #c3002f;
+}
+.startmenu__empty {
+  list-style: none;
+  padding: 12px;
+  color: #777;
+  text-align: center;
+}
+.startmenu__footer {
+  background: linear-gradient(180deg, #1f6fe0 0%, #0a3bc4 100%);
+  padding: 8px 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+.startmenu__logoff {
   border: none;
-  border-radius: 8px;
-  background: #3b82f6;
-  color: white;
+  background: none;
+  color: #fff;
+  font: inherit;
   cursor: pointer;
-}
-
-button:hover {
-  background: #2563eb;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
