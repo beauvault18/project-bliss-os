@@ -109,23 +109,21 @@ export function WindowView({ win }: { win: WindowState }) {
         },
       });
     } else if (animStatus === 'closing' || animStatus === 'quitting') {
-      // Burn down over a deterministic duration, then finalize. The window only
-      // leaves once the burn ends.
+      // Burn down over a deterministic duration, then finalize. Finalization is
+      // driven by a timer (not the spring's onRest, which is unreliable for
+      // duration tweens), so the window always leaves exactly when the burn ends.
+      const quitting = animStatus === 'quitting';
+      const appIdForQuit = anim?.appId ?? win.appId;
       const dur = (closePreset?.durationMs ?? 1000) / speedFactor;
       progressApi.set({ progress: 1 });
-      progressApi.start({
-        progress: 0,
-        config: { duration: dur },
-        onRest: () => {
-          const a = useWindowAnimationStore.getState().anims[win.id];
-          if (a?.status === 'closing') {
-            useWindowStore.getState().closeWindow(win.id);
-          } else if (a?.status === 'quitting') {
-            useWindowStore.getState().quitApp(a.appId ?? win.appId);
-          }
-          useWindowAnimationStore.getState().clear(win.id);
-        },
-      });
+      progressApi.start({ progress: 0, config: { duration: dur } });
+      const timer = setTimeout(() => {
+        if (!useWindowAnimationStore.getState().anims[win.id]) return;
+        if (quitting) useWindowStore.getState().quitApp(appIdForQuit);
+        else useWindowStore.getState().closeWindow(win.id);
+        useWindowAnimationStore.getState().clear(win.id);
+      }, dur + 60);
+      return () => clearTimeout(timer);
     } else {
       progressApi.start({ progress: 1, config: { tension: 300, friction: 26 } });
     }
