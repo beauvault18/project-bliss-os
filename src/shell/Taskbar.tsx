@@ -1,5 +1,5 @@
 import { useWindowStore } from '../core/windowStore';
-import { getApp } from '../core/appRegistry';
+import { APPS, getApp } from '../core/appRegistry';
 import { SystemTray } from './SystemTray';
 
 export function Taskbar({
@@ -10,8 +10,19 @@ export function Taskbar({
   onToggleStart: () => void;
 }) {
   const windows = useWindowStore((s) => s.windows);
-  const focus = useWindowStore((s) => s.focus);
+  const running = useWindowStore((s) => s.running);
+  const openOrFocus = useWindowStore((s) => s.openOrFocus);
   const minimize = useWindowStore((s) => s.minimize);
+
+  // One entry per running app (registry order), including windowless ones.
+  const entries = APPS.filter((a) => running[a.id]).map((a) => {
+    const wins = windows.filter((w) => w.appId === a.id);
+    const top = wins.length
+      ? wins.reduce((x, y) => (x.z >= y.z ? x : y))
+      : null;
+    const active = !!top && top.focused && !top.minimized;
+    return { appId: a.id, hasWindow: wins.length > 0, top, active };
+  });
 
   return (
     <div className="taskbar">
@@ -27,17 +38,21 @@ export function Taskbar({
       </button>
 
       <div className="taskbar__tasks">
-        {windows.map((w) => {
-          const active = w.focused && !w.minimized;
+        {entries.map(({ appId, top, active }) => {
+          const app = getApp(appId);
           return (
             <button
-              key={w.id}
+              key={appId}
               className={`task${active ? ' task--active' : ''}`}
-              onClick={() => (active ? minimize(w.id) : focus(w.id))}
               data-testid="task-button"
+              data-appid={appId}
+              onClick={() =>
+                active && top ? minimize(top.id) : openOrFocus(appId)
+              }
             >
-              <span aria-hidden>{getApp(w.appId)?.icon}</span>
-              <span className="task__label">{w.title}</span>
+              <span className="task__dot" aria-hidden />
+              <span aria-hidden>{app?.icon}</span>
+              <span className="task__label">{app?.title}</span>
             </button>
           );
         })}

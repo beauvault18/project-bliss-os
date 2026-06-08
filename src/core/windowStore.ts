@@ -174,5 +174,5 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
           h: viewport.h - TASKBAR_H,
         };
       }),
-    }),
+    })),
 }));

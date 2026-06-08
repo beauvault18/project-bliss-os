@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { useWindowStore } from './windowStore';
 
 /** App ids currently considered "running" (visible window or closed-but-alive). */
 export function useRunningAppIds(): string[] {
-  return useWindowStore((s) => Object.keys(s.running));
+  // Select the stable `running` object (not a fresh array) to avoid an
+  // infinite re-render loop under zustand v5's Object.is snapshot check.
+  const running = useWindowStore((s) => s.running);
+  return useMemo(() => Object.keys(running), [running]);
 }
 
 export function useIsRunning(appId: string): boolean {

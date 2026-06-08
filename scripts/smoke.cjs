@@ -94,18 +94,80 @@ app.whenReady().then(() => {
       console.log('DRAG ' + JSON.stringify(drag));
 
       // Teardown: close the Angular calculator, reopen, confirm clean re-mount.
-      await run(`(() => { const c = window.__bliss.windows().find(w => w.appId === 'calculator'); window.__bliss.close(c.id); })()`);
+      await run(`(() => { const c = window.__bliss.windows().find(w => w.appId === 'calculator'); window.__bliss.closeWindow(c.id); })()`);
       await wait(400);
       await run(`window.__bliss.open('calculator')`);
       await wait(900);
       const remount = await run(`({
         calcDisplay: document.querySelector('[data-appid="calculator"] [data-testid="calc-display"]')?.textContent ?? null,
-        angularWindows: document.querySelectorAll('[data-appid="calculator"]').length,
+        angularWindows: document.querySelectorAll('[data-testid="window"][data-appid="calculator"]').length,
       })`);
       console.log('REMOUNT ' + JSON.stringify(remount));
 
+      // --- v2 Phase A: fullscreen bridge + desktop icons launch/focus -------
+      const v2base = await run(`({
+        fsBridge: typeof window.electronAPI?.toggleFullscreen,
+        icons: document.querySelectorAll('[data-testid="desktop-icon"]').length,
+      })`);
+      console.log('V2_BASE ' + JSON.stringify(v2base));
+
+      // Click the Settings desktop icon twice: should launch once, then focus (no dup).
+      await run(`document.querySelector('[data-testid="desktop-icon"][data-appid="settings"]').click()`);
+      await wait(300);
+      const afterFirstClick = await run(`window.__bliss.windows().filter(w => w.appId === 'settings').length`);
+      await run(`document.querySelector('[data-testid="desktop-icon"][data-appid="settings"]').click()`);
+      await wait(300);
+      const afterSecondClick = await run(`window.__bliss.windows().filter(w => w.appId === 'settings').length`);
+      console.log('ICON_LAUNCH ' + JSON.stringify({ afterFirstClick, afterSecondClick }));
+
+      // --- v2 Phase B: Rapid Control menu -> Dock Left ----------------------
+      const vp = await run(`({ w: window.innerWidth, h: window.innerHeight })`);
+      await run(`document.querySelector('[data-appid="notepad"] [data-testid="rapid-btn"]').click()`);
+      await wait(250);
+      const menuOpen = await run(`!!document.querySelector('[data-testid="rapid-menu"]')`);
+      await run(`document.querySelector('[data-testid="rcm-dock-left"]').click()`);
+      await wait(250);
+      const docked = await run(`(() => { const w = window.__bliss.windows().find(w => w.appId === 'notepad'); return { x: w.x, w: w.w }; })()`);
+      console.log('RAPID_DOCK ' + JSON.stringify({ menuOpen, docked, halfW: Math.round(vp.w / 2) }));
+
+      // --- v2 Phase B: transparency slider ----------------------------------
+      await run(`document.querySelector('[data-appid="notepad"] [data-testid="rapid-btn"]').click()`);
+      await wait(200);
+      await run(`(() => {
+        const s = document.querySelector('[data-testid="rcm-opacity"]');
+        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        setter.call(s, '0.5');
+        s.dispatchEvent(new Event('input', { bubbles: true }));
+      })()`);
+      await wait(200);
+      const opacity = await run(`window.__bliss.windows().find(w => w.appId === 'notepad').opacity`);
+      console.log('OPACITY ' + JSON.stringify(opacity));
+
+      // --- v2 Phase B: close vs quit ----------------------------------------
+      await run(`(() => { const w = window.__bliss.windows().find(w => w.appId === 'minesweeper'); if (!w) window.__bliss.open('minesweeper'); })()`);
+      await wait(300);
+      await run(`(() => { const w = window.__bliss.windows().find(w => w.appId === 'minesweeper'); window.__bliss.closeWindow(w.id); })()`);
+      await wait(150);
+      const afterClose = await run(`({
+        hasWindow: window.__bliss.windows().some(w => w.appId === 'minesweeper'),
+        running: window.__bliss.running().includes('minesweeper'),
+      })`);
+      await run(`window.__bliss.quitApp('minesweeper')`);
+      await wait(150);
+      const afterQuit = await run(`window.__bliss.running().includes('minesweeper')`);
+      console.log('CLOSE_QUIT ' + JSON.stringify({ afterClose, afterQuit }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
-      const ok = base.canvas && base.start && opened.notepad && opened.fsRows > 0 && calcResult === '15' && fsAfter === fsBefore + 1 && drag.after.x === drag.before.x + 60 && remount.calcDisplay === '0' && errors.length === 0;
+      const ok =
+        base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
+        calcResult === '15' && fsAfter === fsBefore + 1 &&
+        drag.after.x === drag.before.x + 60 && remount.calcDisplay === '0' &&
+        v2base.fsBridge === 'function' && v2base.icons >= 7 &&
+        afterFirstClick === 1 && afterSecondClick === 1 &&
+        menuOpen === true && docked.x === 0 && Math.abs(docked.w - Math.round(vp.w / 2)) <= 1 &&
+        Math.abs(opacity - 0.5) < 0.01 &&
+        afterClose.hasWindow === false && afterClose.running === true && afterQuit === false &&
+        errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);
     } catch (e) {
@@ -115,4 +177,4 @@ app.whenReady().then(() => {
     }
   });
 });
-setTimeout(() => { console.log('HARD_TIMEOUT'); console.log('ERRORS ' + JSON.stringify(errors)); app.exit(9); }, 30000);
+setTimeout(() => { console.log('HARD_TIMEOUT'); console.log('ERRORS ' + JSON.stringify(errors)); app.exit(9); }, 45000);

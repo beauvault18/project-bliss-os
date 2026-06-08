@@ -309,3 +309,168 @@ body {
   align-items: center;
   gap: 6px;
 }
+
+/* --------------------------- Desktop icons ------------------------------- */
+.desktop-icons {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 1;
+  display: grid;
+  grid-auto-flow: row;
+  gap: 4px;
+  width: 92px;
+}
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+  width: 92px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+}
+.desktop-icon:hover,
+.desktop-icon:focus-visible {
+  background: rgba(60, 120, 230, 0.28);
+  border-color: rgba(180, 210, 255, 0.5);
+  outline: none;
+}
+.desktop-icon__glyph {
+  position: relative;
+  font-size: 2.2rem;
+  line-height: 1;
+  display: block;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+  transition: filter 0.15s ease;
+}
+.desktop-icon__glyph--hover {
+  filter: drop-shadow(0 0 10px rgba(140, 200, 255, 0.95))
+    drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+.desktop-icon__dot {
+  position: absolute;
+  right: -2px;
+  bottom: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #5dff8d;
+  box-shadow: 0 0 8px 2px rgba(93, 255, 141, 0.85);
+}
+.desktop-icon__label {
+  font-size: 0.72rem;
+  text-align: center;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.85);
+  line-height: 1.15;
+}
+
+/* ----------------------- Rapid Control button ---------------------------- */
+.rapid-btn {
+  width: 28px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 5px;
+  color: #fff;
+  font-size: 0.85rem;
+  line-height: 1;
+  cursor: pointer;
+  background: linear-gradient(180deg, #7ad0ff, #2f7ce0);
+  box-shadow: 0 0 6px rgba(120, 200, 255, 0.6);
+  transition: filter 0.12s ease;
+}
+.rapid-btn:hover,
+.rapid-btn--active {
+  filter: brightness(1.2);
+  box-shadow: 0 0 10px rgba(150, 220, 255, 0.9);
+}
+
+/* ----------------------- Rapid Control menu ------------------------------ */
+.rcm-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 90000;
+}
+.rcm {
+  position: fixed;
+  z-index: 90001;
+  width: 210px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(22, 34, 60, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(120, 170, 255, 0.4);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  color: #eaf1ff;
+  font-family: Tahoma, 'Segoe UI', sans-serif;
+}
+.rcm__title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  padding: 4px 8px 6px;
+}
+.rcm__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-align: left;
+}
+.rcm__item:hover {
+  background: linear-gradient(90deg, #2f6fe0, #3b86f0);
+}
+.rcm__item--danger:hover {
+  background: linear-gradient(90deg, #c0392b, #e25141);
+}
+.rcm__glyph {
+  width: 18px;
+  text-align: center;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+.rcm__slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 6px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.78rem;
+}
+.rcm__slider input {
+  flex: 1;
+  accent-color: #5fb0ff;
+}
+.rcm__pct {
+  width: 34px;
+  text-align: right;
+  opacity: 0.8;
+}
+
+/* ----------------------- Taskbar running dot ----------------------------- */
+.task__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5dff8d;
+  box-shadow: 0 0 6px 1px rgba(93, 255, 141, 0.85);
+  flex: none;
+}
+.task--active .task__dot {
+  background: #eaff9c;
+  box-shadow: 0 0 6px 1px rgba(234, 255, 156, 0.9);
+}
