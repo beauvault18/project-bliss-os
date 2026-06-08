@@ -292,7 +292,7 @@ app.whenReady().then(() => {
       const nid = await run(`(window.__bliss.windows().find(w => w.appId === 'notepad') || {}).id || null`);
       // Minimize Notepad -> somersault onto the desktop as a token.
       await run(`window.__bliss.minimizeAnimated(${JSON.stringify(nid)}, 'notepad')`);
-      await wait(1300);
+      await wait(1700);
       const somerMin = await run(`(() => {
         const w = window.__bliss.windows().find(w => w.appId === 'notepad');
         return {
@@ -306,7 +306,7 @@ app.whenReady().then(() => {
 
       // Double-click the token to restore.
       await run(`document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))`);
-      await wait(1300);
+      await wait(1800);
       const somerRestore = await run(`(() => {
         const w = window.__bliss.windows().find(w => w.appId === 'notepad');
         return {
@@ -318,7 +318,7 @@ app.whenReady().then(() => {
 
       // Minimize again -> token; then Quit App should remove the token too.
       await run(`window.__bliss.minimizeAnimated(${JSON.stringify(nid)}, 'notepad')`);
-      await wait(1300);
+      await wait(1700);
       const tokenBeforeQuit = await run(`!!document.querySelector('[data-testid="desktop-token"][data-appid="notepad"]')`);
       await run(`window.__bliss.quitApp('notepad')`);
       await wait(200);
@@ -327,6 +327,26 @@ app.whenReady().then(() => {
         running: window.__bliss.running().includes('notepad'),
       })`);
       console.log('SOMERSAULT ' + JSON.stringify({ presetSelected, somerMin, somerRestore, tokenBeforeQuit, afterTokenQuit }));
+
+      // --- v2 Phase F: Living Parallax Desktop ------------------------------
+      const parallaxControls = await run(`!!document.querySelector('[data-testid="lab-parallax"]')`);
+      const layerDefault = await run(`!!document.querySelector('[data-testid="parallax-desktop"]')`);
+      // Toggle the parallax desktop off, then on.
+      await run(`document.querySelector('[data-testid="lab-parallax"]').click()`);
+      await wait(150);
+      const layerOff = await run(`!!document.querySelector('[data-testid="parallax-desktop"]')`);
+      await run(`document.querySelector('[data-testid="lab-parallax"]').click()`);
+      await wait(150);
+      const layerOn = await run(`!!document.querySelector('[data-testid="parallax-desktop"]')`);
+      // Hacker Mode adds a visible class + scanline layer.
+      await run(`document.querySelector('[data-testid="lab-hacker"]').click()`);
+      await wait(150);
+      const hackerOn = await run(`!!document.querySelector('[data-testid="parallax-desktop"].living-parallax--hacker') && !!document.querySelector('[data-testid="hacker-layer"]')`);
+      // Particle density persists in preferences.
+      await run(`document.querySelector('[data-testid="lab-particle-density"] [data-value="high"]').click()`);
+      await wait(120);
+      const density = await run(`window.__bliss.prefs().particleDensity`);
+      console.log('PARALLAX ' + JSON.stringify({ parallaxControls, layerDefault, layerOff, layerOn, hackerOn, density }));
 
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
@@ -355,6 +375,8 @@ app.whenReady().then(() => {
         somerRestore.minimized === false && somerRestore.tokenDom === false && somerRestore.windowDom === true &&
         tokenBeforeQuit === true &&
         afterTokenQuit.tokenDom === false && afterTokenQuit.running === false &&
+        parallaxControls === true && layerDefault === true &&
+        layerOff === false && layerOn === true && hackerOn === true && density === 'high' &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);

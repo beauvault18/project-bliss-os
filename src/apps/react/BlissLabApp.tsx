@@ -4,6 +4,8 @@ import {
   usePreferencesStore,
   type AnimationSpeed,
   type ControlSide,
+  type ParticleDensity,
+  type ParticleSpeed,
 } from '../../core/preferencesStore';
 import { MINIMIZE_PRESETS } from '../../core/animationPresets';
 
@@ -252,6 +254,56 @@ export function BlissLabApp() {
             testid="lab-glass"
             checked={p.glassMode}
             onChange={(v) => update({ glassMode: v })}
+          />
+        </Row>
+      </Section>
+
+      <Section title="Living Desktop">
+        <Row label="Parallax desktop">
+          <Toggle
+            testid="lab-parallax"
+            checked={p.parallaxEnabled}
+            onChange={(v) => update({ parallaxEnabled: v })}
+          />
+        </Row>
+        <Row label="Parallax strength">
+          <Slider
+            testid="lab-parallax-strength"
+            value={p.parallaxStrength}
+            min={0}
+            max={100}
+            onChange={(v) => update({ parallaxStrength: v })}
+          />
+        </Row>
+        <Row label="Particle density">
+          <Segmented<ParticleDensity>
+            testid="lab-particle-density"
+            value={p.particleDensity}
+            options={[
+              { value: 'low', label: 'Low' },
+              { value: 'medium', label: 'Med' },
+              { value: 'high', label: 'High' },
+            ]}
+            onChange={(v) => update({ particleDensity: v })}
+          />
+        </Row>
+        <Row label="Particle speed">
+          <Segmented<ParticleSpeed>
+            testid="lab-particle-speed"
+            value={p.particleSpeed}
+            options={[
+              { value: 'slow', label: 'Slow' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'fast', label: 'Fast' },
+            ]}
+            onChange={(v) => update({ particleSpeed: v })}
+          />
+        </Row>
+        <Row label="Hacker mode">
+          <Toggle
+            testid="lab-hacker"
+            checked={p.hackerMode}
+            onChange={(v) => update({ hackerMode: v })}
           />
         </Row>
       </Section>

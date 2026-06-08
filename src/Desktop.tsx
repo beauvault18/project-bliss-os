@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DesktopScene } from './scene/DesktopScene';
+import { LivingParallaxDesktop } from './scene/LivingParallaxDesktop';
 import { DesktopIcons } from './shell/DesktopIcons';
 import { DesktopProcessTokens } from './shell/DesktopProcessTokens';
 import { Taskbar } from './shell/Taskbar';
@@ -66,6 +67,7 @@ export function Desktop() {
   return (
     <div className="desktop">
       <DesktopScene />
+      <LivingParallaxDesktop />
       {showDesktopIcons && <DesktopIcons />}
       <DesktopProcessTokens />
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}

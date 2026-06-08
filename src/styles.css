@@ -23,6 +23,83 @@ body {
   width: 100%;
 }
 
+/* --------------------- Living Parallax Desktop --------------------------- */
+.living-parallax {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.parallax-layer {
+  position: absolute;
+  inset: -80px; /* oversize so parallax never reveals an edge */
+  will-change: transform;
+}
+/* Digital horizon glow. */
+.lp-horizon {
+  background:
+    radial-gradient(
+      120% 60% at 50% 78%,
+      rgba(90, 160, 255, 0.28) 0%,
+      rgba(40, 90, 200, 0.12) 35%,
+      transparent 70%
+    ),
+    radial-gradient(80% 50% at 50% 16%, rgba(10, 20, 50, 0.45) 0%, transparent 70%);
+}
+/* Perspective grid. */
+.lp-grid {
+  background-image:
+    linear-gradient(rgba(150, 200, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150, 200, 255, 0.07) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(120% 80% at 50% 70%, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(120% 80% at 50% 70%, #000 30%, transparent 80%);
+}
+/* Soft drifting mist. */
+.lp-mist {
+  background:
+    radial-gradient(40% 30% at 22% 30%, rgba(120, 170, 255, 0.1) 0%, transparent 70%),
+    radial-gradient(45% 35% at 78% 65%, rgba(160, 120, 255, 0.09) 0%, transparent 70%);
+}
+/* Hacker Mode extras. */
+.living-parallax--hacker .lp-grid {
+  background-image:
+    linear-gradient(rgba(80, 255, 140, 0.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80, 255, 140, 0.12) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+.lp-scanlines {
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(80, 255, 140, 0.06) 0px,
+    rgba(80, 255, 140, 0.06) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+}
+.lp-hacker-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 160px rgba(40, 255, 120, 0.18);
+}
+
+/* Subtle icon parallax (reads --px/--py set by LivingParallaxDesktop). */
+.desktop-icons {
+  transform: translate3d(
+    calc(var(--px, 0) * var(--pstr, 0.5) * 6px),
+    calc(var(--py, 0) * var(--pstr, 0.5) * 6px),
+    0
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .parallax-layer,
+  .desktop-icons {
+    transform: none !important;
+  }
+}
+
 /* ----------------------------- Windows ----------------------------------- */
 .window {
   display: flex;
