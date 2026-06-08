@@ -348,6 +348,36 @@ app.whenReady().then(() => {
       const density = await run(`window.__bliss.prefs().particleDensity`);
       console.log('PARALLAX ' + JSON.stringify({ parallaxControls, layerDefault, layerOff, layerOn, hackerOn, density }));
 
+      // --- v2 Phase G: Cinematic Alt-Tab / Mission Control overview ---------
+      // Opening overview adds the backdrop layer + the is-overview card class.
+      const ovVis = await run(`window.__bliss.windows().filter(w => !w.minimized).length`);
+      await run(`window.__bliss.openOverview()`);
+      await wait(500);
+      const ovOpen = await run(`({
+        active: window.__bliss.overviewActive(),
+        backdrop: !!document.querySelector('[data-testid="window-overview"]'),
+        cards: document.querySelectorAll('[data-testid="window"].is-overview').length,
+        labels: document.querySelectorAll('[data-testid="ov-label"]').length,
+      })`);
+      // Click the calculator card -> focuses that app and exits overview.
+      await run(`document.querySelector('[data-testid="window"][data-appid="calculator"]').click()`);
+      await wait(500);
+      const ovClick = await run(`({
+        active: window.__bliss.overviewActive(),
+        backdrop: !!document.querySelector('[data-testid="window-overview"]'),
+        calcFocused: !!(window.__bliss.windows().find(w => w.appId === 'calculator') || {}).focused,
+      })`);
+      // Reopen, then Escape exits cleanly (and does NOT leave fullscreen).
+      await run(`window.__bliss.openOverview()`);
+      await wait(300);
+      await run(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`);
+      await wait(400);
+      const ovEsc = await run(`({
+        active: window.__bliss.overviewActive(),
+        backdrop: !!document.querySelector('[data-testid="window-overview"]'),
+      })`);
+      console.log('OVERVIEW ' + JSON.stringify({ ovVis, ovOpen, ovClick, ovEsc }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -377,6 +407,10 @@ app.whenReady().then(() => {
         afterTokenQuit.tokenDom === false && afterTokenQuit.running === false &&
         parallaxControls === true && layerDefault === true &&
         layerOff === false && layerOn === true && hackerOn === true && density === 'high' &&
+        ovVis >= 2 && ovOpen.active === true && ovOpen.backdrop === true &&
+        ovOpen.cards >= 2 && ovOpen.labels >= 1 &&
+        ovClick.active === false && ovClick.backdrop === false && ovClick.calcFocused === true &&
+        ovEsc.active === false && ovEsc.backdrop === false &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);

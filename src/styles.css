@@ -23,6 +23,65 @@ body {
   width: 100%;
 }
 
+/* ----------------------- Window overview (Phase G) ----------------------- */
+.window-overview-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 52px;
+  cursor: default;
+  animation: ov-fade 0.2s ease;
+}
+@keyframes ov-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.window-overview__hint {
+  color: #cfe0ff;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  background: rgba(10, 18, 40, 0.6);
+  border: 1px solid rgba(120, 160, 255, 0.3);
+  border-radius: 999px;
+  padding: 6px 16px;
+  pointer-events: none;
+}
+/* A window card in overview mode. */
+.window-overview.is-overview {
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  outline: 2px solid transparent;
+  transition: outline-color 0.12s ease;
+}
+.window-overview--selected {
+  outline: 3px solid #5fb0ff !important;
+  box-shadow:
+    0 0 0 4px rgba(95, 176, 255, 0.25),
+    0 22px 60px rgba(0, 0, 0, 0.6) !important;
+}
+.window-ov-label {
+  position: absolute;
+  left: 50%;
+  bottom: -30px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  color: #eaf1ff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
 /* --------------------- Living Parallax Desktop --------------------------- */
 .living-parallax {
   position: absolute;
