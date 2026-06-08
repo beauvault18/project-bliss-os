@@ -1,7 +1,8 @@
 import type { AppDef } from './types';
 import { NotepadApp } from '../apps/react/NotepadApp';
 import { MinesweeperApp } from '../apps/react/MinesweeperApp';
-import { SettingsApp, BlissLabApp, AiCoderApp } from '../apps/react/StubApp';
+import { SettingsApp, AiCoderApp } from '../apps/react/StubApp';
+import { BlissLabApp } from '../apps/react/BlissLabApp';
 import { CalculatorApp } from '../apps/angular/calculator.app';
 import { FileExplorerApp } from '../apps/angular/file-explorer.app';
 
@@ -50,7 +51,7 @@ export const APPS: AppDef[] = [
     id: 'bliss-lab',
     title: 'Bliss Lab',
     icon: '🧪',
-    defaultSize: { w: 460, h: 360 },
+    defaultSize: { w: 380, h: 480 },
     body: { framework: 'react', component: BlissLabApp },
     showOnDesktop: true,
   },

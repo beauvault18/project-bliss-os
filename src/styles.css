@@ -474,3 +474,202 @@ body {
   background: #eaff9c;
   box-shadow: 0 0 6px 1px rgba(234, 255, 156, 0.9);
 }
+
+/* ----------------------- Titlebar control side --------------------------- */
+.titlebar__name {
+  flex: 1;
+}
+.titlebar--left .titlebar__name {
+  padding-left: 6px;
+}
+
+/* --------------------------- Glass mode ---------------------------------- */
+.window--glass {
+  background: rgba(236, 233, 216, 0.55) !important;
+  backdrop-filter: blur(7px);
+}
+.window--glass .window__body {
+  background: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* ---------------------- Animation debug label ---------------------------- */
+.window-debug {
+  position: absolute;
+  top: -20px;
+  left: 0;
+  z-index: 5;
+  font: 0.66rem/1 monospace;
+  color: #0b1020;
+  background: #eaff9c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* ----------------------------- Bliss Lab --------------------------------- */
+.lab {
+  height: 100%;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #f4f7fc 0%, #e7edf7 100%);
+  font-family: Tahoma, 'Segoe UI', sans-serif;
+  font-size: 0.82rem;
+  color: #1b2b4a;
+}
+.lab__hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  color: #fff;
+  background: linear-gradient(135deg, #6a2fd0, #3a7bd5);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.lab__hero-glyph {
+  font-size: 1.8rem;
+}
+.lab__hero-sub {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+.lab__section {
+  padding: 8px 14px 12px;
+  border-bottom: 1px solid #d8e0ee;
+}
+.lab__heading {
+  margin: 6px 0;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6878a0;
+}
+.lab__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+}
+.lab__label {
+  flex: 1;
+  min-width: 92px;
+}
+.lab__slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1.3;
+}
+.lab__slider input {
+  flex: 1;
+  accent-color: #6a2fd0;
+}
+.lab__value {
+  width: 38px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: #555;
+}
+.lab__toggle {
+  width: 42px;
+  height: 22px;
+  border-radius: 999px;
+  border: none;
+  background: #c2cbe0;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.lab__toggle--on {
+  background: #4caf50;
+}
+.lab__knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.15s;
+}
+.lab__toggle--on .lab__knob {
+  transform: translateX(20px);
+}
+.lab__segmented {
+  display: inline-flex;
+  border: 1px solid #b9c4dc;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.lab__seg {
+  border: none;
+  background: #fff;
+  padding: 5px 12px;
+  cursor: pointer;
+  font: inherit;
+  color: #33405e;
+}
+.lab__seg--on {
+  background: #3a7bd5;
+  color: #fff;
+}
+.lab__presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  flex: 1.3;
+}
+.lab__preset {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #c3cde0;
+  border-radius: 6px;
+  background: #fff;
+  padding: 6px 8px;
+  cursor: pointer;
+  font: inherit;
+  color: #25324f;
+}
+.lab__preset--on {
+  border-color: #6a2fd0;
+  background: #efe7fb;
+  font-weight: 700;
+}
+.lab__preset--soon {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.lab__preset-radio {
+  color: #6a2fd0;
+}
+.lab__soon {
+  margin-left: auto;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  background: #b9c4dc;
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 5px;
+}
+.lab__buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.lab__btn {
+  flex: 1;
+  border: 1px solid #b9c4dc;
+  border-radius: 6px;
+  background: linear-gradient(#fff, #eef2f9);
+  padding: 7px 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.lab__btn:hover {
+  background: linear-gradient(#eef2f9, #dfe6f3);
+}

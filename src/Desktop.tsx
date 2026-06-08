@@ -4,6 +4,7 @@ import { DesktopIcons } from './shell/DesktopIcons';
 import { Taskbar } from './shell/Taskbar';
 import { StartMenu } from './shell/StartMenu';
 import { useWindowStore } from './core/windowStore';
+import { usePreferencesStore } from './core/preferencesStore';
 import {
   useWindowAnimationStore,
   animatedMinimize,
@@ -12,6 +13,7 @@ import {
 
 export function Desktop() {
   const [startOpen, setStartOpen] = useState(false);
+  const showDesktopIcons = usePreferencesStore((s) => s.showDesktopIcons);
 
   // Full-screen demo mode: F11 toggles, Esc exits (after closing menus).
   // The Rapid Control / Start menus stop Esc propagation while open, so this
@@ -59,7 +61,7 @@ export function Desktop() {
   return (
     <div className="desktop">
       <DesktopScene />
-      <DesktopIcons />
+      {showDesktopIcons && <DesktopIcons />}
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}
       <Taskbar
         startOpen={startOpen}

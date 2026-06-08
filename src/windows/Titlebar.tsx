@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import type { WindowState } from '../core/types';
 import { getApp } from '../core/appRegistry';
 import { useWindowStore } from '../core/windowStore';
+import { usePreferencesStore } from '../core/preferencesStore';
 import { RapidControlMenu } from '../shell/RapidControlMenu';
 
 const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
@@ -15,6 +16,7 @@ export function Titlebar({
   bind: Record<string, unknown>;
 }) {
   const app = getApp(win.appId);
+  const controlSide = usePreferencesStore((s) => s.controlSide);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [menu, setMenu] = useState<DOMRect | null>(null);
 
@@ -27,30 +29,36 @@ export function Titlebar({
     }
   };
 
+  const rapidButton = (
+    <button
+      ref={btnRef}
+      className={`rapid-btn${menu ? ' rapid-btn--active' : ''}`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={toggleMenu}
+      title="Rapid Control"
+      data-testid="rapid-btn"
+    >
+      ✦
+    </button>
+  );
+
   return (
     <div
-      className={`titlebar${win.focused ? '' : ' titlebar--blurred'}`}
+      className={`titlebar titlebar--${controlSide}${win.focused ? '' : ' titlebar--blurred'}`}
       {...bind}
       onDoubleClick={() =>
         useWindowStore.getState().toggleMaximize(win.id, viewport())
       }
       data-testid="titlebar"
     >
+      {controlSide === 'left' && rapidButton}
+
       <span className="titlebar__name">
         <span className="titlebar__icon">{app?.icon}</span>
         {win.title}
       </span>
 
-      <button
-        ref={btnRef}
-        className={`rapid-btn${menu ? ' rapid-btn--active' : ''}`}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={toggleMenu}
-        title="Rapid Control"
-        data-testid="rapid-btn"
-      >
-        ✦
-      </button>
+      {controlSide === 'right' && rapidButton}
 
       {menu && (
         <RapidControlMenu

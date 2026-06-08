@@ -8,6 +8,7 @@ import { useWindowStore } from '../core/windowStore';
 import { getApp } from '../core/appRegistry';
 import { magneticSnap } from '../core/snapping';
 import { getMinimizePreset } from '../core/animationPresets';
+import { usePreferencesStore, animSpeedFactor } from '../core/preferencesStore';
 import { useWindowAnimationStore } from '../effects/windowAnimationStore';
 import { computeGenieGeometry } from '../effects/minimizeEffects';
 import { Titlebar } from './Titlebar';
@@ -24,6 +25,19 @@ export function WindowView({ win }: { win: WindowState }) {
   const focus = useWindowStore((s) => s.focus);
   const move = useWindowStore((s) => s.move);
   const app = getApp(win.appId);
+
+  // Live design preferences (Bliss Lab).
+  const wobbleStrength = usePreferencesStore((s) => s.wobbleStrength);
+  const wobbleSpeed = usePreferencesStore((s) => s.wobbleSpeed);
+  const snapStrength = usePreferencesStore((s) => s.snapStrength);
+  const animationSpeed = usePreferencesStore((s) => s.animationSpeed);
+  const dramatic = usePreferencesStore((s) => s.dramaticMode);
+  const glass = usePreferencesStore((s) => s.glassMode);
+  const showDebug = usePreferencesStore((s) => s.showAnimationDebug);
+
+  const wobbleK = wobbleStrength / 60; // 60 = baseline feel
+  const wobbleTension = 320 * (0.5 + wobbleSpeed / 100);
+  const speedFactor = animSpeedFactor(animationSpeed);
 
   // Minimize/restore animation status for this window.
   const anim = useWindowAnimationStore((s) => s.anims[win.id]);
@@ -64,10 +78,14 @@ export function WindowView({ win }: { win: WindowState }) {
   // Drive the genie animation off the status. minimized=true is committed only
   // on the spring's onRest, so the window never vanishes before the animation.
   useEffect(() => {
+    const scaleCfg = (c: { tension?: number; friction?: number }) => ({
+      tension: (c.tension ?? 230) * speedFactor,
+      friction: (c.friction ?? 24) * (dramatic ? 0.8 : 1),
+    });
     if (animStatus === 'minimizing') {
       progressApi.start({
         progress: 0,
-        config: preset.config,
+        config: scaleCfg(preset.config),
         onRest: () => {
           const a = useWindowAnimationStore.getState().anims[win.id];
           if (a?.status === 'minimizing') {
@@ -80,7 +98,7 @@ export function WindowView({ win }: { win: WindowState }) {
       progressApi.set({ progress: 0 });
       progressApi.start({
         progress: 1,
-        config: preset.restoreConfig ?? preset.config,
+        config: scaleCfg(preset.restoreConfig ?? preset.config),
         onRest: () => {
           if (useWindowAnimationStore.getState().anims[win.id]?.status === 'restoring') {
             useWindowAnimationStore.getState().clear(win.id);
@@ -102,11 +120,11 @@ export function WindowView({ win }: { win: WindowState }) {
         const svx = vx * dirX;
         const svy = vy * dirY;
         api.start({
-          skewX: clamp(-svx * 5, -14, 14),
-          skewY: clamp(-svy * 3, -10, 10),
-          scaleX: 1 + clamp(Math.abs(svx) * 0.05, 0, 0.09),
-          scaleY: 1 - clamp(Math.abs(svx) * 0.04, 0, 0.07),
-          config: { tension: 320, friction: 18 },
+          skewX: clamp(-svx * 5 * wobbleK, -14 * wobbleK, 14 * wobbleK),
+          skewY: clamp(-svy * 3 * wobbleK, -10 * wobbleK, 10 * wobbleK),
+          scaleX: 1 + clamp(Math.abs(svx) * 0.05 * wobbleK, 0, 0.12),
+          scaleY: 1 - clamp(Math.abs(svx) * 0.04 * wobbleK, 0, 0.1),
+          config: { tension: wobbleTension, friction: 18 },
         });
       }
 
@@ -114,10 +132,12 @@ export function WindowView({ win }: { win: WindowState }) {
         const st = useWindowStore.getState();
         const cur = st.windows.find((w) => w.id === win.id);
         if (cur) {
+          const threshold = (snapStrength / 100) * 36; // 50 -> 18px baseline
           const snapped = magneticSnap(
             cur,
             st.windows.filter((o) => o.id !== cur.id),
             { w: width, h: height },
+            threshold,
           );
           st.setPos(cur.id, snapped.x, snapped.y);
         }
@@ -126,7 +146,7 @@ export function WindowView({ win }: { win: WindowState }) {
           skewY: 0,
           scaleX: 1,
           scaleY: 1,
-          config: { tension: 200, friction: 11 },
+          config: { tension: 200 * (wobbleSpeed / 50), friction: 11 },
         });
       }
     },
@@ -154,9 +174,14 @@ export function WindowView({ win }: { win: WindowState }) {
             borderRadius: progress.to((p) => preset.style(p, geo).borderRadius as string),
           }}
         >
+          {showDebug && anim && (
+            <span className="window-debug" data-testid="anim-debug">
+              {anim.status} · {anim.presetId}
+            </span>
+          )}
           {/* Inner window: existing wobble + transparency, unchanged. */}
           <animated.div
-            className={`window${win.focused ? ' window--focused' : ''}`}
+            className={`window${win.focused ? ' window--focused' : ''}${glass ? ' window--glass' : ''}`}
             style={{
               width: '100%',
               height: '100%',

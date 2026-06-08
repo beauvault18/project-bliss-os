@@ -1,4 +1,5 @@
 import { useWindowStore } from '../core/windowStore';
+import { usePreferencesStore } from '../core/preferencesStore';
 import { APPS, getApp } from '../core/appRegistry';
 import {
   animatedMinimize,
@@ -16,6 +17,7 @@ export function Taskbar({
   const windows = useWindowStore((s) => s.windows);
   const running = useWindowStore((s) => s.running);
   const openOrFocus = useWindowStore((s) => s.openOrFocus);
+  const showDots = usePreferencesStore((s) => s.showTaskbarDots);
 
   // One entry per running app (registry order), including windowless ones.
   const entries = APPS.filter((a) => running[a.id]).map((a) => {
@@ -55,7 +57,7 @@ export function Taskbar({
                 else openOrFocus(appId);
               }}
             >
-              <span className="task__dot" aria-hidden />
+              {showDots && <span className="task__dot" aria-hidden />}
               <span aria-hidden>{app?.icon}</span>
               <span className="task__label">{app?.title}</span>
             </button>
