@@ -1,24 +1,16 @@
-// Single renderer entry point that boots BOTH frameworks into the same page.
+// Renderer entry. Project Bliss OS is a React application; the WebGL desktop is
+// driven by react-three-fiber. Angular is bootstrapped lazily, per window, by
+// the AngularWindowHost — not globally here.
 import './styles.css';
 
-// --- React ---------------------------------------------------------------
-import React from 'react';
-import { createRoot } from 'react-dom/client';
-import { ReactApp } from './react/ReactApp';
-
-const reactContainer = document.getElementById('react-root');
-if (reactContainer) {
-  createRoot(reactContainer).render(React.createElement(ReactApp));
-}
-
-// --- Angular -------------------------------------------------------------
-// zone.js must be imported before Angular bootstraps.
-import 'zone.js';
-// @angular/compiler enables JIT template compilation in the browser.
+// Angular runs in JIT mode, so its compiler must be present before any Angular
+// component is created at runtime (see framework-bridges/AngularWindowHost).
 import '@angular/compiler';
-import { bootstrapApplication } from '@angular/platform-browser';
-import { AngularAppComponent } from './angular/app.component';
 
-bootstrapApplication(AngularAppComponent).catch((err) =>
-  console.error('Angular bootstrap failed:', err),
-);
+import { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Desktop } from './Desktop';
+
+const container = document.getElementById('root');
+if (!container) throw new Error('#root not found');
+createRoot(container).render(createElement(Desktop));

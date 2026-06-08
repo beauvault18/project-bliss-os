@@ -5,26 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
       'unsafe-eval' is required because Angular runs in JIT mode and compiles
-      templates at runtime via new Function(). If you switch Angular to AOT,
-      you can drop 'unsafe-eval'. See README for the tradeoff.
+      templates at runtime via new Function(). 'blob:' in worker-src is reserved
+      for future WebGL loaders (Draco/KTX); v1 uses none. See README.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src 'self';"
     />
-    <title>Hello World — Electron + Angular + React</title>
+    <title>Project Bliss OS</title>
   </head>
   <body>
-    <main id="app">
-      <h1>Hello World 👋</h1>
-      <p class="subtitle">One Electron window, two UI frameworks.</p>
-      <div class="panels">
-        <!-- React mounts here -->
-        <div id="react-root"></div>
-        <!-- Angular bootstraps into this custom element -->
-        <app-root></app-root>
-      </div>
-    </main>
+    <div id="root"></div>
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>
