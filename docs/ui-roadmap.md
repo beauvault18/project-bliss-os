@@ -31,12 +31,17 @@ strength/speed, snap strength, default opacity, glass mode, **window control sid
 (moves the ✦ button)**, animation speed, dramatic mode, demo toggles (show icons /
 taskbar dots / animation labels), Reset Demo Layout, Reset All Settings.
 
-## ⏭️ Phase E1 — Fire Close / Fire Quit (next)
-A burn-up close animation as a **new preset** (close-animation slot), selectable
-in Bliss Lab. The preset system is the seam — no hardcoding.
+## ✅ Phase E1 — Fire Close / Fire Quit (done)
+Close/quit burn-down animations as modular close presets
+([closeEffects.ts](../src/effects/closeEffects.ts),
+[FireCloseOverlay.tsx](../src/effects/FireCloseOverlay.tsx)).
+**Ember Close** (soft, blue/orange) keeps the app running; **Fire Quit**
+(dramatic char/darken) clears the running indicator. Finalization is timer-driven
+so the window leaves exactly when the burn ends; respects animation speed +
+dramatic mode; toggleable via the Bliss Lab "Fire close effects" switch.
 
-## Phase E2 — Somersault token minimize
-Flip-into-icon minimize as another preset.
+## ⏭️ Phase E2 — Somersault token minimize (next)
+Flip-into-icon minimize as another minimize preset, selectable in Bliss Lab.
 
 ## Phase F — Parallax particle desktop
 Depth-layer particle background reacting to the mouse; later webcam face-tracking.

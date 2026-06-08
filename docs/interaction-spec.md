@@ -48,9 +48,10 @@ The single ✦ button (right of the titlebar) opens an animated popover:
 - The animation system is modular: presets live in `src/core/animationPresets.ts`
   (`genie` today; somersault / fire / gravity / cube are registered stubs for later).
 
-## Close vs Quit (the key model)
-- **Close Window** = the visible window goes away, but the app is still "running" (dot persists). Reopening starts **fresh**.
-- **Quit App** = the app fully ends; its dot and all windows disappear.
+## Close vs Quit (the key model + Fire animation)
+- **Close Window** → soft **Ember Close** burn (blue/orange ember line travels top→bottom, gentle fade). The visible window goes away, but the app is still "running" (dot persists). Reopening starts **fresh**.
+- **Quit App** → dramatic **Fire Quit** burn (top-down flame line, falling embers, char/darken). The app fully ends; its dot and all windows disappear.
+- The burn finalizes deterministically when the animation ends — the window never leaves early. Toggle off via Bliss Lab → "Fire close effects" for instant close/quit. Dramatic mode intensifies the fire.
 
 ## Bliss Lab (Phase D — the control room)
 Open the **Bliss Lab** app to change desktop/window behavior **live** (settings
