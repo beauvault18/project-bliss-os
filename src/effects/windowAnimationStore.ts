@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useWindowStore } from '../core/windowStore';
+import { usePreferencesStore } from '../core/preferencesStore';
 import { DEFAULT_MINIMIZE_PRESET } from '../core/animationPresets';
 import type { Rect } from './minimizeEffects';
 
@@ -59,7 +60,7 @@ function taskbarTarget(appId: string): Rect {
 export function animatedMinimize(
   id: string,
   appId: string,
-  presetId = DEFAULT_MINIMIZE_PRESET,
+  presetId = usePreferencesStore.getState().minimizePreset || DEFAULT_MINIMIZE_PRESET,
 ): void {
   if (useWindowAnimationStore.getState().anims[id]) return; // already animating
   useWindowAnimationStore
@@ -71,7 +72,7 @@ export function animatedMinimize(
 export function animatedRestore(
   id: string,
   appId: string,
-  presetId = DEFAULT_MINIMIZE_PRESET,
+  presetId = usePreferencesStore.getState().restorePreset || DEFAULT_MINIMIZE_PRESET,
 ): void {
   if (useWindowAnimationStore.getState().anims[id]) return;
   // Set the anim FIRST so WindowView's first render (after un-minimizing) starts

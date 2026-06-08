@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { WindowState } from './types';
 import { getApp } from './appRegistry';
+import { usePreferencesStore } from './preferencesStore';
 
 type DockSide = 'left' | 'right';
 
@@ -23,6 +24,7 @@ interface WindowStore {
   restore: (id: string) => void;
   dock: (id: string, side: DockSide, viewport: { w: number; h: number }) => void;
   toggleMaximize: (id: string, viewport: { w: number; h: number }) => void;
+  resetLayout: () => void;
 }
 
 const TASKBAR_H = 40;
@@ -52,7 +54,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       focused: true,
       minimized: false,
       maximized: false,
-      opacity: 1,
+      opacity: usePreferencesStore.getState().defaultOpacity,
     };
     set({
       windows: [...s.windows.map((w) => ({ ...w, focused: false })), win],
@@ -172,6 +174,25 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
           y: 0,
           w: viewport.w,
           h: viewport.h - TASKBAR_H,
+        };
+      }),
+    })),
+
+  // Re-tile every open window to a clean cascade (non-destructive: nothing closes).
+  resetLayout: () =>
+    set((s) => ({
+      windows: s.windows.map((w, i) => {
+        const app = getApp(w.appId);
+        const offset = (i % 6) * 28;
+        return {
+          ...w,
+          x: 120 + offset,
+          y: 90 + offset,
+          w: app?.defaultSize.w ?? w.w,
+          h: app?.defaultSize.h ?? w.h,
+          maximized: false,
+          minimized: false,
+          restore: undefined,
         };
       }),
     })),
