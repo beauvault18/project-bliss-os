@@ -29,6 +29,10 @@ export interface Preferences {
   particleDensity: ParticleDensity;
   particleSpeed: ParticleSpeed;
   hackerMode: boolean;
+  // Window switcher (overview)
+  overviewMotion: 'low' | 'normal' | 'high';
+  overviewDim: number; // 0–80 (% background dim)
+  overviewLabels: boolean;
   // Demo tools
   showDesktopIcons: boolean;
   showTaskbarDots: boolean;
@@ -52,6 +56,9 @@ const DEFAULTS: Preferences = {
   particleDensity: 'medium',
   particleSpeed: 'normal',
   hackerMode: false,
+  overviewMotion: 'normal',
+  overviewDim: 45,
+  overviewLabels: true,
   showDesktopIcons: true,
   showTaskbarDots: true,
   showAnimationDebug: false,

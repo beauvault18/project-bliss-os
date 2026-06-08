@@ -9,6 +9,7 @@ import { getApp } from '../core/appRegistry';
 import { magneticSnap } from '../core/snapping';
 import { getMinimizePreset, getClosePreset } from '../core/animationPresets';
 import { usePreferencesStore, animSpeedFactor } from '../core/preferencesStore';
+import { useOverviewStore, type OverviewSlot } from '../core/overviewStore';
 import { useWindowAnimationStore } from '../effects/windowAnimationStore';
 import { computeGenieGeometry } from '../effects/minimizeEffects';
 import { FireCloseOverlay } from '../effects/FireCloseOverlay';
@@ -21,7 +22,25 @@ const clamp = (v: number, lo: number, hi: number) =>
 
 const IDENTITY_GEO = { dx: 0, dy: 0, targetScale: 0.08, pointDown: true };
 
-export function WindowView({ win }: { win: WindowState }) {
+const OVERVIEW_MOTION = {
+  low: { tension: 120, friction: 26 },
+  normal: { tension: 170, friction: 24 },
+  high: { tension: 240, friction: 20 },
+} as const;
+
+export function WindowView({
+  win,
+  index = 0,
+  overview = false,
+  slot = null,
+  selected = false,
+}: {
+  win: WindowState;
+  index?: number;
+  overview?: boolean;
+  slot?: OverviewSlot | null;
+  selected?: boolean;
+}) {
   const { width, height } = useThree((s) => s.size);
   const focus = useWindowStore((s) => s.focus);
   const move = useWindowStore((s) => s.move);
@@ -35,6 +54,10 @@ export function WindowView({ win }: { win: WindowState }) {
   const dramatic = usePreferencesStore((s) => s.dramaticMode);
   const glass = usePreferencesStore((s) => s.glassMode);
   const showDebug = usePreferencesStore((s) => s.showAnimationDebug);
+  const overviewMotion = usePreferencesStore((s) => s.overviewMotion);
+  const overviewLabels = usePreferencesStore((s) => s.overviewLabels);
+  const setSelectedIndex = useOverviewStore((s) => s.setSelectedIndex);
+  const closeOverview = useOverviewStore((s) => s.close);
 
   const wobbleK = wobbleStrength / 60; // 60 = baseline feel
   const wobbleTension = 320 * (0.5 + wobbleSpeed / 100);
