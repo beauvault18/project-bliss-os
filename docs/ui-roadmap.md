@@ -48,12 +48,22 @@ full forward somersault and shrinks onto the desktop as a **live process token**
 token to restore. Tokens are derived from window state (`minimized && tokenPos`)
 so they can't desync; quitting removes both window and token.
 
-## ⏭️ Phase F — Parallax particle desktop (next)
-Depth-layer particle background reacting to the mouse; later webcam face-tracking.
+## ✅ Phase F — Living Parallax Desktop (done)
+Futuristic floating background: a WebGL drifting starfield
+([ParticleField.tsx](../src/scene/ParticleField.tsx)) plus DOM depth layers —
+digital horizon, perspective grid, mist, and a Hacker Mode (scanlines + glow)
+([LivingParallaxDesktop.tsx](../src/scene/LivingParallaxDesktop.tsx)). A single
+rAF loop smooths the pointer into shared CSS variables so every layer (and the
+icons) parallaxes with no per-frame React render. Bliss Lab controls: parallax
+on/off, strength, particle density, particle speed, Hacker Mode. Respects
+prefers-reduced-motion; pauses particles when the window is hidden.
+
+## ⏭️ Phase G — Cinematic Alt-Tab / Mission Control (next)
+All windows fan out in a 3D-feeling grid for quick switching.
 
 ## Later
-Maximize rubber-band physics · real Settings app · Alt-Tab / Mission Control ·
-desktop cube · AI Coder mock panel.
+Phase H workspace cube · Phase I edge-flip/workspace move · Phase J AI Coder mock ·
+maximize rubber-band physics · real Settings app · webcam face-tracking.
 
 ## Explicitly later (product/backend, not prototype)
 AI agents, real app mounting, Wayland/compositor, filesystem indexing, face

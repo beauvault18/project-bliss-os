@@ -8,6 +8,14 @@ Reference for how each interaction behaves today. Source of truth for tests in
 |---|---|
 | `F11` | Toggle native full-screen demo mode |
 | `Esc` | Close open menu → else close Start menu → else exit full-screen |
+| Move mouse | Living Parallax Desktop shifts depth layers, particles, and icons (premium, subtle) |
+
+## Living Parallax Desktop (Phase F)
+A futuristic floating background behind everything: a WebGL drifting starfield +
+DOM depth layers (digital horizon, perspective grid, mist). Bliss Lab → **Living
+Desktop** controls: Parallax on/off, Parallax strength, Particle density
+(Low/Med/High), Particle speed (Slow/Normal/Fast), and **Hacker Mode** (green
+grid + scanlines + glow — the intense variant). Honors prefers-reduced-motion.
 
 ## Desktop icons (`src/shell/DesktopIcons.tsx`)
 - Hover → icon scales 1.12× and glows.
