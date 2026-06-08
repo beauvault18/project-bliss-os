@@ -1,4 +1,5 @@
 import { useWindowStore } from '../core/windowStore';
+import { useWorkspaceStore } from '../core/workspaceStore';
 import { getApp } from '../core/appRegistry';
 import { animatedRestore } from '../effects/windowAnimationStore';
 import { TOKEN_W, TOKEN_H } from '../core/tokenLayout';
@@ -41,7 +42,12 @@ function Token({ win }: { win: WindowState }) {
  */
 export function DesktopProcessTokens() {
   const windows = useWindowStore((s) => s.windows);
-  const tokens = windows.filter((w) => w.minimized && w.tokenPos);
+  const activeWorkspace = useWorkspaceStore((s) => s.active);
+  // Only show tokens for the active workspace, so a minimized app doesn't leak
+  // onto a desktop it doesn't belong to.
+  const tokens = windows.filter(
+    (w) => w.minimized && w.tokenPos && w.workspace === activeWorkspace,
+  );
   if (!tokens.length) return null;
   return (
     <div className="proc-tokens" data-testid="desktop-tokens">

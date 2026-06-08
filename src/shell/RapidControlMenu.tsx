@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { animated, useSpring } from '@react-spring/web';
 import type { WindowState } from '../core/types';
 import { useWindowStore } from '../core/windowStore';
+import { WORKSPACE_COUNT } from '../core/workspaceStore';
 import {
   animatedMinimize,
   animatedClose,
@@ -89,6 +90,23 @@ export function RapidControlMenu({
             {it.label}
           </button>
         ))}
+        <div className="rcm__ws">
+          <span className="rcm__ws-label">Move to Workspace</span>
+          <div className="rcm__ws-row">
+            {Array.from({ length: WORKSPACE_COUNT }, (_, i) => (
+              <button
+                key={i}
+                type="button"
+                className={`rcm__ws-btn${i === win.workspace ? ' rcm__ws-btn--on' : ''}`}
+                data-testid={`rcm-move-ws-${i + 1}`}
+                disabled={i === win.workspace}
+                onClick={() => run(() => store().moveToWorkspace(win.id, i))}
+              >
+                {i + 1}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="rcm__slider">
           <span>Opacity</span>
           <input

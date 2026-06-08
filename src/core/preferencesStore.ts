@@ -33,6 +33,10 @@ export interface Preferences {
   overviewMotion: 'low' | 'normal' | 'high';
   overviewDim: number; // 0–80 (% background dim)
   overviewLabels: boolean;
+  // Workspace cube
+  cubeEnabled: boolean; // animate the cube on workspace switch
+  cubeSpeed: 'slow' | 'normal' | 'fast';
+  cubeIntensity: 'low' | 'normal' | 'high'; // zoom-back depth / tilt
   // Demo tools
   showDesktopIcons: boolean;
   showTaskbarDots: boolean;
@@ -59,6 +63,9 @@ const DEFAULTS: Preferences = {
   overviewMotion: 'normal',
   overviewDim: 45,
   overviewLabels: true,
+  cubeEnabled: true,
+  cubeSpeed: 'normal',
+  cubeIntensity: 'normal',
   showDesktopIcons: true,
   showTaskbarDots: true,
   showAnimationDebug: false,

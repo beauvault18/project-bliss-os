@@ -6,9 +6,11 @@ import { DesktopProcessTokens } from './shell/DesktopProcessTokens';
 import { Taskbar } from './shell/Taskbar';
 import { StartMenu } from './shell/StartMenu';
 import { WindowOverview } from './shell/WindowOverview';
+import { WorkspaceCube } from './shell/WorkspaceCube';
 import { useWindowStore } from './core/windowStore';
 import { usePreferencesStore } from './core/preferencesStore';
 import { useOverviewStore } from './core/overviewStore';
+import { useWorkspaceStore } from './core/workspaceStore';
 import {
   useWindowAnimationStore,
   animatedMinimize,
@@ -56,6 +58,20 @@ export function Desktop() {
         return;
       }
 
+      // Workspace switching: Ctrl+Alt+Arrow (Ctrl+Shift+Arrow as a fallback for
+      // when the OS swallows Ctrl+Alt). Only when the overview isn't open.
+      if (
+        e.ctrlKey &&
+        (e.altKey || e.shiftKey) &&
+        (e.key === 'ArrowRight' || e.key === 'ArrowLeft')
+      ) {
+        e.preventDefault();
+        const ws = useWorkspaceStore.getState();
+        if (e.key === 'ArrowRight') ws.next();
+        else ws.prev();
+        return;
+      }
+
       if (e.key === 'F11') {
         e.preventDefault();
         void window.electronAPI?.toggleFullscreen();
@@ -96,6 +112,13 @@ export function Desktop() {
       openOverview: () => useOverviewStore.getState().open(),
       closeOverview: () => useOverviewStore.getState().close(),
       overviewActive: () => useOverviewStore.getState().active,
+      workspace: () => useWorkspaceStore.getState().active,
+      switchWorkspace: (i: number) => useWorkspaceStore.getState().switchTo(i),
+      nextWorkspace: () => useWorkspaceStore.getState().next(),
+      prevWorkspace: () => useWorkspaceStore.getState().prev(),
+      cubeActive: () => !!useWorkspaceStore.getState().spin,
+      moveWindowToWorkspace: (id: string, ws: number) =>
+        s().moveToWorkspace(id, ws),
       windows: () => s().windows,
       running: () => Object.keys(s().running),
     };
@@ -108,6 +131,7 @@ export function Desktop() {
       {showDesktopIcons && <DesktopIcons />}
       <DesktopProcessTokens />
       <WindowOverview />
+      <WorkspaceCube />
       {startOpen && <StartMenu onClose={() => setStartOpen(false)} />}
       <Taskbar
         startOpen={startOpen}

@@ -378,6 +378,54 @@ app.whenReady().then(() => {
       })`);
       console.log('OVERVIEW ' + JSON.stringify({ ovVis, ovOpen, ovClick, ovEsc }));
 
+      // --- v2 Phase H: Workspace Cube ---------------------------------------
+      // Indicator renders with one pip per workspace; we start on workspace 1 (idx 0).
+      const wsBase = await run(`({
+        indicator: !!document.querySelector('[data-testid="workspace-indicator"]'),
+        pips: document.querySelectorAll('[data-testid="workspace-pip"]').length,
+        active: window.__bliss.workspace(),
+        windowsHere: document.querySelectorAll('[data-testid="window"]').length,
+      })`);
+      // Switch to workspace 2 (idx 1): cube layer appears, active flips immediately.
+      await run(`window.__bliss.switchWorkspace(1)`);
+      await wait(140);
+      const cubeMid = await run(`({
+        cube: !!document.querySelector('[data-testid="workspace-cube"]'),
+        faces: document.querySelectorAll('[data-testid="ws-cube-face"]').length,
+        active: window.__bliss.workspace(),
+      })`);
+      await wait(1600); // let the cube finish + tear down
+      const cubeDone = await run(`({
+        cube: !!document.querySelector('[data-testid="workspace-cube"]'),
+        active: window.__bliss.workspace(),
+        windowsHere: document.querySelectorAll('[data-testid="window"]').length,
+      })`);
+      // New window opens on the active workspace (idx 1) and is visible here.
+      await run(`window.__bliss.open('notepad')`);
+      await wait(300);
+      const newWin = await run(`(() => {
+        const w = window.__bliss.windows().find(x => x.appId === 'notepad');
+        return {
+          workspace: w ? w.workspace : null,
+          domVisible: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+        };
+      })()`);
+      // Move notepad to workspace 1 (idx 0): it disappears from the current view.
+      await run(`window.__bliss.moveWindowToWorkspace((window.__bliss.windows().find(x => x.appId === 'notepad') || {}).id, 0)`);
+      await wait(180);
+      const movedAway = await run(`({
+        winWs: (window.__bliss.windows().find(x => x.appId === 'notepad') || {}).workspace,
+        domVisible: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+      })`);
+      // Switch back to workspace 1 (idx 0): notepad returns, exactly where it was.
+      await run(`window.__bliss.switchWorkspace(0)`);
+      await wait(1600);
+      const backHome = await run(`({
+        active: window.__bliss.workspace(),
+        domVisible: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+      })`);
+      console.log('WORKSPACE ' + JSON.stringify({ wsBase, cubeMid, cubeDone, newWin, movedAway, backHome }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -411,6 +459,13 @@ app.whenReady().then(() => {
         ovOpen.cards >= 2 && ovOpen.labels >= 1 &&
         ovClick.active === false && ovClick.backdrop === false && ovClick.calcFocused === true &&
         ovEsc.active === false && ovEsc.backdrop === false &&
+        wsBase.indicator === true && wsBase.pips === 4 && wsBase.active === 0 &&
+        wsBase.windowsHere >= 2 &&
+        cubeMid.cube === true && cubeMid.faces === 4 && cubeMid.active === 1 &&
+        cubeDone.cube === false && cubeDone.active === 1 && cubeDone.windowsHere === 0 &&
+        newWin.workspace === 1 && newWin.domVisible === true &&
+        movedAway.winWs === 0 && movedAway.domVisible === false &&
+        backHome.active === 0 && backHome.domVisible === true &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);

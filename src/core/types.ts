@@ -12,6 +12,7 @@ export interface WindowState {
   w: number;
   h: number;
   z: number; // stacking order; higher = closer to camera / on top
+  workspace: number; // virtual desktop this window lives on (0-based)
   focused: boolean;
   minimized: boolean;
   maximized: boolean;

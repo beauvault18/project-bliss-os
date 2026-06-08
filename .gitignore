@@ -3,3 +3,5 @@ dist/
 dist-electron/
 *.log
 .DS_Store
+# macOS AppleDouble sidecar files (created on non-HFS volumes like the T7 Shield)
+._*

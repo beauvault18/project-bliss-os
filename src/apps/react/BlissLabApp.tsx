@@ -340,6 +340,40 @@ export function BlissLabApp() {
         </Row>
       </Section>
 
+      <Section title="Workspaces">
+        <Row label="Workspace cube">
+          <Toggle
+            testid="lab-cube"
+            checked={p.cubeEnabled}
+            onChange={(v) => update({ cubeEnabled: v })}
+          />
+        </Row>
+        <Row label="Cube speed">
+          <Segmented<'slow' | 'normal' | 'fast'>
+            testid="lab-cube-speed"
+            value={p.cubeSpeed}
+            options={[
+              { value: 'slow', label: 'Slow' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'fast', label: 'Fast' },
+            ]}
+            onChange={(v) => update({ cubeSpeed: v })}
+          />
+        </Row>
+        <Row label="Cube intensity">
+          <Segmented<'low' | 'normal' | 'high'>
+            testid="lab-cube-intensity"
+            value={p.cubeIntensity}
+            options={[
+              { value: 'low', label: 'Low' },
+              { value: 'normal', label: 'Normal' },
+              { value: 'high', label: 'High' },
+            ]}
+            onChange={(v) => update({ cubeIntensity: v })}
+          />
+        </Row>
+      </Section>
+
       <Section title="Controls">
         <Row label="Window control side">
           <Segmented<ControlSide>

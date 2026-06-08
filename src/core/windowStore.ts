@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { WindowState } from './types';
 import { getApp } from './appRegistry';
 import { usePreferencesStore } from './preferencesStore';
+import { useWorkspaceStore } from './workspaceStore';
 
 type DockSide = 'left' | 'right';
 
@@ -26,6 +27,8 @@ interface WindowStore {
     opts: { presetId: string; tokenPos?: { x: number; y: number } },
   ) => void;
   restore: (id: string) => void;
+  /** Reassign a window to another virtual desktop (visibility-only move). */
+  moveToWorkspace: (id: string, workspace: number) => void;
   dock: (id: string, side: DockSide, viewport: { w: number; h: number }) => void;
   toggleMaximize: (id: string, viewport: { w: number; h: number }) => void;
   resetLayout: () => void;
@@ -55,6 +58,7 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
       w: app.defaultSize.w,
       h: app.defaultSize.h,
       z,
+      workspace: useWorkspaceStore.getState().active,
       focused: true,
       minimized: false,
       maximized: false,
@@ -171,6 +175,15 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     })),
 
   restore: (id) => get().focus(id),
+
+  // Move a window to another workspace. Visibility-only: the window keeps its
+  // exact x/y/w/h and reappears there when that workspace becomes active.
+  moveToWorkspace: (id, workspace) =>
+    set((s) => ({
+      windows: s.windows.map((w) =>
+        w.id === id ? { ...w, workspace, focused: false } : w,
+      ),
+    })),
 
   dock: (id, side, viewport) =>
     set((s) => {
