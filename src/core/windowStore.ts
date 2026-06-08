@@ -21,6 +21,10 @@ interface WindowStore {
   resize: (id: string, w: number, h: number) => void;
   setOpacity: (id: string, opacity: number) => void;
   minimize: (id: string) => void;
+  commitMinimize: (
+    id: string,
+    opts: { presetId: string; tokenPos?: { x: number; y: number } },
+  ) => void;
   restore: (id: string) => void;
   dock: (id: string, side: DockSide, viewport: { w: number; h: number }) => void;
   toggleMaximize: (id: string, viewport: { w: number; h: number }) => void;
@@ -96,7 +100,15 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
         topZ: z,
         windows: s.windows.map((w) =>
           w.id === id
-            ? { ...w, focused: true, z, minimized: false }
+            ? {
+                ...w,
+                focused: true,
+                z,
+                minimized: false,
+                // Restoring clears any desktop token.
+                tokenPos: undefined,
+                minimizedWith: undefined,
+              }
             : { ...w, focused: false },
         ),
       };
@@ -138,6 +150,23 @@ export const useWindowStore = create<WindowStore>((set, get) => ({
     set((s) => ({
       windows: s.windows.map((w) =>
         w.id === id ? { ...w, minimized: true, focused: false } : w,
+      ),
+    })),
+
+  // Commit a finished minimize animation: records the preset and (for
+  // somersault) the desktop token position so a token renders.
+  commitMinimize: (id, { presetId, tokenPos }) =>
+    set((s) => ({
+      windows: s.windows.map((w) =>
+        w.id === id
+          ? {
+              ...w,
+              minimized: true,
+              focused: false,
+              minimizedWith: presetId,
+              tokenPos,
+            }
+          : w,
       ),
     })),
 

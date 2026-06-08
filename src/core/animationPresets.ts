@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { genieStyle } from '../effects/minimizeEffects';
+import { somersaultTokenStyle } from '../effects/somersaultEffects';
 import { emberCloseStyle, fireQuitStyle } from '../effects/closeEffects';
 
 /** Geometry handed to a minimize style: where/how far to collapse. */
@@ -31,6 +32,8 @@ export interface MinimizePreset {
   config: AnimConfig;
   /** Spring config for restoring (defaults to a springier overshoot). */
   restoreConfig?: AnimConfig;
+  /** Land as a desktop process token instead of collapsing into the taskbar. */
+  landsOnDesktop?: boolean;
 }
 
 /**
@@ -45,9 +48,15 @@ export const MINIMIZE_PRESETS: Record<string, MinimizePreset> = {
     config: { tension: 230, friction: 26 },
     restoreConfig: { tension: 260, friction: 18 },
   },
+  'somersault-token': {
+    id: 'somersault-token',
+    label: 'Somersault Token',
+    style: somersaultTokenStyle,
+    config: { tension: 170, friction: 20 },
+    restoreConfig: { tension: 200, friction: 16 },
+    landsOnDesktop: true,
+  },
   // Phase E stubs — register a `style` + `config` and they light up automatically:
-  // somersault: { id: 'somersault', label: 'Somersault', style: somersaultStyle, config: {...} },
-  // fire:       { id: 'fire',       label: 'Fire Shrink', style: fireStyle,       config: {...} },
   // gravity:    { id: 'gravity',    label: 'Gravity Drop',style: gravityStyle,    config: {...} },
   // cube:       { id: 'cube',       label: 'Cube Flip',   style: cubeStyle,       config: {...} },
 };

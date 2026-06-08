@@ -18,6 +18,10 @@ export interface WindowState {
   opacity: number; // 0.4 – 1, controlled by the Rapid Control transparency slider
   /** Pre-maximize rect, restored on un-maximize. */
   restore?: { x: number; y: number; w: number; h: number };
+  /** Desktop landing position when minimized as a "somersault token". */
+  tokenPos?: { x: number; y: number };
+  /** Preset used to minimize (so restore reverses the same animation). */
+  minimizedWith?: string;
 }
 
 export interface ReactAppDef {

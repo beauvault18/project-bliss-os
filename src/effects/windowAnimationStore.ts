@@ -5,7 +5,9 @@ import {
   DEFAULT_MINIMIZE_PRESET,
   CLOSE_PRESET,
   QUIT_PRESET,
+  getMinimizePreset,
 } from '../core/animationPresets';
+import { tokenSlotPosition, TOKEN_W, TOKEN_H } from '../core/tokenLayout';
 import type { Rect } from './minimizeEffects';
 
 export type AnimStatus = 'minimizing' | 'restoring' | 'closing' | 'quitting';
@@ -73,31 +75,47 @@ function taskbarTarget(appId: string): Rect {
   };
 }
 
-/** Begin a minimize animation toward the taskbar; commit happens on onRest. */
+/** Where a minimize should land: the taskbar button, or a desktop token slot. */
+function minimizeTarget(appId: string, preset: { landsOnDesktop?: boolean }): Rect {
+  if (!preset.landsOnDesktop) return taskbarTarget(appId);
+  const wins = useWindowStore.getState().windows;
+  const slot = wins.filter((w) => w.minimized && w.tokenPos).length;
+  const pos = tokenSlotPosition(slot, {
+    w: window.innerWidth,
+    h: window.innerHeight,
+  });
+  return { x: pos.x, y: pos.y, w: TOKEN_W, h: TOKEN_H };
+}
+
+/** Begin a minimize animation (taskbar genie or desktop token); commit on finish. */
 export function animatedMinimize(
   id: string,
   appId: string,
   presetId = usePreferencesStore.getState().minimizePreset || DEFAULT_MINIMIZE_PRESET,
 ): void {
   if (useWindowAnimationStore.getState().anims[id]) return; // already animating
-  useWindowAnimationStore
-    .getState()
-    .startMinimize(id, taskbarTarget(appId), presetId);
+  const target = minimizeTarget(appId, getMinimizePreset(presetId));
+  useWindowAnimationStore.getState().startMinimize(id, target, presetId);
 }
 
-/** Begin a restore animation: render the window, then expand it from the taskbar. */
-export function animatedRestore(
-  id: string,
-  appId: string,
-  presetId = usePreferencesStore.getState().restorePreset || DEFAULT_MINIMIZE_PRESET,
-): void {
+/**
+ * Begin a restore animation: render the window, then expand it from wherever it
+ * was minimized to (taskbar button or desktop token), reversing the same preset.
+ */
+export function animatedRestore(id: string, appId: string): void {
   if (useWindowAnimationStore.getState().anims[id]) return;
+  const win = useWindowStore.getState().windows.find((w) => w.id === id);
+  const presetId =
+    win?.minimizedWith ||
+    usePreferencesStore.getState().restorePreset ||
+    DEFAULT_MINIMIZE_PRESET;
+  const target = win?.tokenPos
+    ? { x: win.tokenPos.x, y: win.tokenPos.y, w: TOKEN_W, h: TOKEN_H }
+    : taskbarTarget(appId);
   // Set the anim FIRST so WindowView's first render (after un-minimizing) starts
   // pinned at collapsed (progress 0) — avoids a full-size flash.
-  useWindowAnimationStore
-    .getState()
-    .startRestore(id, taskbarTarget(appId), presetId);
-  useWindowStore.getState().focus(id); // un-minimizes, focuses, raises z-order
+  useWindowAnimationStore.getState().startRestore(id, target, presetId);
+  useWindowStore.getState().focus(id); // un-minimizes (clears token), raises z
 }
 
 /**
