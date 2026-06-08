@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { genieStyle } from '../effects/minimizeEffects';
+import { emberCloseStyle, fireQuitStyle } from '../effects/closeEffects';
 
 /** Geometry handed to a minimize style: where/how far to collapse. */
 export interface MinimizeGeometry {
