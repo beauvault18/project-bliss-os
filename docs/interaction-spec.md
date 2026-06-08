@@ -38,6 +38,16 @@ The single ✦ button (right of the titlebar) opens an animated popover:
 - **Glowing dot** = running. Click focuses/restores; click the active app to minimize it.
 - Windowless running app → click re-opens a fresh window.
 
+## Minimize / Restore (Phase C — "genie")
+- **Minimize** (Rapid menu ▁, or click an active taskbar button) → the window
+  **collapses toward its taskbar button** with a genie effect (translate + shrink +
+  trapezoidal neck + fade). The window only becomes `minimized` **after** the
+  animation finishes — it never vanishes early.
+- **Restore** (click a minimized app's taskbar button) → the window **expands back
+  out** from the taskbar button, then becomes interactive again.
+- The animation system is modular: presets live in `src/core/animationPresets.ts`
+  (`genie` today; somersault / fire / gravity / cube are registered stubs for later).
+
 ## Close vs Quit (the key model)
 - **Close Window** = the visible window goes away, but the app is still "running" (dot persists). Reopening starts **fresh**.
 - **Quit App** = the app fully ends; its dot and all windows disappear.

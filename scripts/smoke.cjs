@@ -142,6 +142,9 @@ app.whenReady().then(() => {
       await wait(200);
       const opacity = await run(`window.__bliss.windows().find(w => w.appId === 'notepad').opacity`);
       console.log('OPACITY ' + JSON.stringify(opacity));
+      // Close the Rapid menu so later interactions start from a clean state.
+      await run(`document.querySelector('[data-testid="rcm-scrim"]')?.click()`);
+      await wait(150);
 
       // --- v2 Phase B: close vs quit ----------------------------------------
       await run(`(() => { const w = window.__bliss.windows().find(w => w.appId === 'minesweeper'); if (!w) window.__bliss.open('minesweeper'); })()`);
@@ -157,6 +160,37 @@ app.whenReady().then(() => {
       const afterQuit = await run(`window.__bliss.running().includes('minesweeper')`);
       console.log('CLOSE_QUIT ' + JSON.stringify({ afterClose, afterQuit }));
 
+      // --- v2 Phase C: genie minimize / restore (timing + state machine) -----
+      // Trigger minimize via the Notepad Rapid menu.
+      await run(`document.querySelector('[data-appid="notepad"] [data-testid="rapid-btn"]').click()`);
+      await wait(250);
+      await run(`document.querySelector('[data-testid="rcm-minimize"]').click()`);
+      // Mid-animation (~60ms): window must STILL be rendered and NOT yet minimized.
+      await wait(70);
+      const midMin = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'notepad');
+        return {
+          status: w ? window.__bliss.animStatus(w.id) : null,
+          minimized: w ? w.minimized : null,
+          domPresent: !!document.querySelector('[data-testid="window"][data-appid="notepad"]'),
+        };
+      })()`);
+      // After the animation completes: minimized true, DOM gone.
+      await wait(1000);
+      const afterMin = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'notepad');
+        return { minimized: w ? w.minimized : null, domPresent: !!document.querySelector('[data-testid="window"][data-appid="notepad"]') };
+      })()`);
+      // Restore via the taskbar button; expands back.
+      await run(`document.querySelector('[data-testid="task-button"][data-appid="notepad"]').click()`);
+      await wait(1000);
+      const afterRestore = await run(`(() => {
+        const w = window.__bliss.windows().find(w => w.appId === 'notepad');
+        return { minimized: w ? w.minimized : null, domPresent: !!document.querySelector('[data-testid="window"][data-appid="notepad"]') };
+      })()`);
+      console.log('MINIMIZE ' + JSON.stringify({ midMin, afterMin }));
+      console.log('RESTORE ' + JSON.stringify(afterRestore));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && opened.notepad && opened.fsRows > 0 &&
@@ -167,6 +201,9 @@ app.whenReady().then(() => {
         menuOpen === true && docked.x === 0 && Math.abs(docked.w - Math.round(vp.w / 2)) <= 1 &&
         Math.abs(opacity - 0.5) < 0.01 &&
         afterClose.hasWindow === false && afterClose.running === true && afterQuit === false &&
+        midMin.status === 'minimizing' && midMin.minimized === false && midMin.domPresent === true &&
+        afterMin.minimized === true && afterMin.domPresent === false &&
+        afterRestore.minimized === false && afterRestore.domPresent === true &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);

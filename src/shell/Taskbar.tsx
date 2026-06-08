@@ -1,5 +1,9 @@
 import { useWindowStore } from '../core/windowStore';
 import { APPS, getApp } from '../core/appRegistry';
+import {
+  animatedMinimize,
+  animatedRestore,
+} from '../effects/windowAnimationStore';
 import { SystemTray } from './SystemTray';
 
 export function Taskbar({
@@ -12,7 +16,6 @@ export function Taskbar({
   const windows = useWindowStore((s) => s.windows);
   const running = useWindowStore((s) => s.running);
   const openOrFocus = useWindowStore((s) => s.openOrFocus);
-  const minimize = useWindowStore((s) => s.minimize);
 
   // One entry per running app (registry order), including windowless ones.
   const entries = APPS.filter((a) => running[a.id]).map((a) => {
@@ -46,9 +49,11 @@ export function Taskbar({
               className={`task${active ? ' task--active' : ''}`}
               data-testid="task-button"
               data-appid={appId}
-              onClick={() =>
-                active && top ? minimize(top.id) : openOrFocus(appId)
-              }
+              onClick={() => {
+                if (active && top) animatedMinimize(top.id, appId);
+                else if (top && top.minimized) animatedRestore(top.id, appId);
+                else openOrFocus(appId);
+              }}
             >
               <span className="task__dot" aria-hidden />
               <span aria-hidden>{app?.icon}</span>

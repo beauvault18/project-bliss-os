@@ -4,6 +4,11 @@ import { DesktopIcons } from './shell/DesktopIcons';
 import { Taskbar } from './shell/Taskbar';
 import { StartMenu } from './shell/StartMenu';
 import { useWindowStore } from './core/windowStore';
+import {
+  useWindowAnimationStore,
+  animatedMinimize,
+  animatedRestore,
+} from './effects/windowAnimationStore';
 
 export function Desktop() {
   const [startOpen, setStartOpen] = useState(false);
@@ -42,6 +47,10 @@ export function Desktop() {
       dock: (id: string, side: 'left' | 'right', vp: { w: number; h: number }) =>
         s().dock(id, side, vp),
       setOpacity: (id: string, o: number) => s().setOpacity(id, o),
+      minimizeAnimated: (id: string, appId: string) => animatedMinimize(id, appId),
+      restoreAnimated: (id: string, appId: string) => animatedRestore(id, appId),
+      animStatus: (id: string) =>
+        useWindowAnimationStore.getState().anims[id]?.status ?? null,
       windows: () => s().windows,
       running: () => Object.keys(s().running),
     };

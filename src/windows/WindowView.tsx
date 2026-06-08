@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { Html } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { useSpring, animated, to } from '@react-spring/web';
@@ -6,6 +7,9 @@ import type { WindowState } from '../core/types';
 import { useWindowStore } from '../core/windowStore';
 import { getApp } from '../core/appRegistry';
 import { magneticSnap } from '../core/snapping';
+import { getMinimizePreset } from '../core/animationPresets';
+import { useWindowAnimationStore } from '../effects/windowAnimationStore';
+import { computeGenieGeometry } from '../effects/minimizeEffects';
 import { Titlebar } from './Titlebar';
 import { ReactWindowHost } from '../framework-bridges/ReactWindowHost';
 import { AngularWindowHost } from '../framework-bridges/AngularWindowHost';
@@ -13,11 +17,18 @@ import { AngularWindowHost } from '../framework-bridges/AngularWindowHost';
 const clamp = (v: number, lo: number, hi: number) =>
   Math.max(lo, Math.min(hi, v));
 
+const IDENTITY_GEO = { dx: 0, dy: 0, targetScale: 0.08, pointDown: true };
+
 export function WindowView({ win }: { win: WindowState }) {
   const { width, height } = useThree((s) => s.size);
   const focus = useWindowStore((s) => s.focus);
   const move = useWindowStore((s) => s.move);
   const app = getApp(win.appId);
+
+  // Minimize/restore animation status for this window.
+  const anim = useWindowAnimationStore((s) => s.anims[win.id]);
+  const animStatus = anim?.status;
+  const preset = getMinimizePreset(anim?.presetId ?? 'genie');
 
   // Window center in world units (ortho, 1 unit == 1 px, +y up, origin center).
   const wx = win.x + win.w / 2 - width / 2;
@@ -32,6 +43,55 @@ export function WindowView({ win }: { win: WindowState }) {
     scaleY: 1,
     config: { tension: 320, friction: 18 },
   }));
+
+  // Genie progress: 1 = fully shown, 0 = collapsed at the taskbar. Starts pinned
+  // at 0 when this window mounts mid-restore so it expands instead of flashing.
+  const [{ progress }, progressApi] = useSpring(() => ({
+    progress: anim?.status === 'restoring' ? 0 : 1,
+  }));
+
+  const geo = useMemo(
+    () =>
+      anim
+        ? computeGenieGeometry(
+            { x: win.x, y: win.y, w: win.w, h: win.h },
+            anim.target,
+          )
+        : IDENTITY_GEO,
+    [anim, win.x, win.y, win.w, win.h],
+  );
+
+  // Drive the genie animation off the status. minimized=true is committed only
+  // on the spring's onRest, so the window never vanishes before the animation.
+  useEffect(() => {
+    if (animStatus === 'minimizing') {
+      progressApi.start({
+        progress: 0,
+        config: preset.config,
+        onRest: () => {
+          const a = useWindowAnimationStore.getState().anims[win.id];
+          if (a?.status === 'minimizing') {
+            useWindowStore.getState().minimize(win.id);
+            useWindowAnimationStore.getState().clear(win.id);
+          }
+        },
+      });
+    } else if (animStatus === 'restoring') {
+      progressApi.set({ progress: 0 });
+      progressApi.start({
+        progress: 1,
+        config: preset.restoreConfig ?? preset.config,
+        onRest: () => {
+          if (useWindowAnimationStore.getState().anims[win.id]?.status === 'restoring') {
+            useWindowAnimationStore.getState().clear(win.id);
+          }
+        },
+      });
+    } else {
+      progressApi.start({ progress: 1, config: { tension: 300, friction: 26 } });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animStatus]);
 
   const bind = useDrag(
     ({ first, last, down, delta: [dx, dy], velocity: [vx, vy], direction: [dirX, dirY] }) => {
@@ -51,7 +111,6 @@ export function WindowView({ win }: { win: WindowState }) {
       }
 
       if (last) {
-        // Magnetic snap to edges/neighbors using fresh positions.
         const st = useWindowStore.getState();
         const cur = st.windows.find((w) => w.id === win.id);
         if (cur) {
@@ -62,7 +121,6 @@ export function WindowView({ win }: { win: WindowState }) {
           );
           st.setPos(cur.id, snapped.x, snapped.y);
         }
-        // Springy settle (low friction => visible wobble).
         api.start({
           skewX: 0,
           skewY: 0,
@@ -75,43 +133,52 @@ export function WindowView({ win }: { win: WindowState }) {
     { filterTaps: true, pointer: { keys: false } },
   );
 
+  const interactive = !anim; // disable input while collapsing/expanding
+
   return (
     <group position={[wx, wy, win.z]}>
-      <Html
-        center
-        zIndexRange={[win.z, win.z]}
-        style={{ pointerEvents: 'none' }}
-        prepend
-      >
+      <Html center zIndexRange={[win.z, win.z]} style={{ pointerEvents: 'none' }} prepend>
+        {/* Genie wrapper: minimize/restore transform, clip, opacity. */}
         <animated.div
-          className={`window${win.focused ? ' window--focused' : ''}`}
+          className="window-genie"
           data-testid="window"
           data-appid={win.appId}
           style={{
             width: win.w,
             height: win.h,
-            opacity: win.opacity,
             pointerEvents: 'auto',
-            transformOrigin: '50% 0%',
-            transform: to(
-              [styles.skewX, styles.skewY, styles.scaleX, styles.scaleY],
-              (kx, ky, sx, sy) =>
-                `skew(${kx}deg, ${ky}deg) scale(${sx}, ${sy})`,
-            ),
+            transform: progress.to((p) => preset.style(p, geo).transform as string),
+            transformOrigin: '50% 50%',
+            opacity: progress.to((p) => preset.style(p, geo).opacity as number),
+            clipPath: progress.to((p) => preset.style(p, geo).clipPath as string),
+            borderRadius: progress.to((p) => preset.style(p, geo).borderRadius as string),
           }}
-          onPointerDown={() => focus(win.id)}
         >
-          <Titlebar win={win} bind={bind() as Record<string, unknown>} />
-          <div className="window__body">
-            {app?.body.framework === 'react' ? (
-              <ReactWindowHost
-                component={app.body.component}
-                windowId={win.id}
-              />
-            ) : app?.body.framework === 'angular' ? (
-              <AngularWindowHost component={app.body.component} />
-            ) : null}
-          </div>
+          {/* Inner window: existing wobble + transparency, unchanged. */}
+          <animated.div
+            className={`window${win.focused ? ' window--focused' : ''}`}
+            style={{
+              width: '100%',
+              height: '100%',
+              opacity: win.opacity,
+              pointerEvents: interactive ? 'auto' : 'none',
+              transformOrigin: '50% 0%',
+              transform: to(
+                [styles.skewX, styles.skewY, styles.scaleX, styles.scaleY],
+                (kx, ky, sx, sy) => `skew(${kx}deg, ${ky}deg) scale(${sx}, ${sy})`,
+              ),
+            }}
+            onPointerDown={() => focus(win.id)}
+          >
+            <Titlebar win={win} bind={bind() as Record<string, unknown>} />
+            <div className="window__body">
+              {app?.body.framework === 'react' ? (
+                <ReactWindowHost component={app.body.component} windowId={win.id} />
+              ) : app?.body.framework === 'angular' ? (
+                <AngularWindowHost component={app.body.component} />
+              ) : null}
+            </div>
+          </animated.div>
         </animated.div>
       </Html>
     </group>

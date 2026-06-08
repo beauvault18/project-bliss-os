@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { animated, useSpring } from '@react-spring/web';
 import type { WindowState } from '../core/types';
 import { useWindowStore } from '../core/windowStore';
+import { animatedMinimize } from '../effects/windowAnimationStore';
 
 const MENU_W = 210;
 
@@ -52,7 +53,7 @@ export function RapidControlMenu({
     { glyph: '◧', label: 'Dock Left', onClick: () => run(() => store().dock(win.id, 'left', viewport)) },
     { glyph: '◨', label: 'Dock Right', onClick: () => run(() => store().dock(win.id, 'right', viewport)) },
     { glyph: '⛶', label: 'Fullscreen', onClick: () => run(() => store().toggleMaximize(win.id, viewport)) },
-    { glyph: '▁', label: 'Minimize', onClick: () => run(() => store().minimize(win.id)) },
+    { glyph: '▁', label: 'Minimize', onClick: () => run(() => animatedMinimize(win.id, win.appId)) },
     { glyph: '✕', label: 'Close Window', onClick: () => run(() => store().closeWindow(win.id)) },
     { glyph: '⏻', label: 'Quit App', onClick: () => run(() => store().quitApp(win.appId)), danger: true },
   ];
