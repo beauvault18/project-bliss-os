@@ -109,11 +109,13 @@ export function WindowView({ win }: { win: WindowState }) {
         },
       });
     } else if (animStatus === 'closing' || animStatus === 'quitting') {
-      // Burn down, then finalize. The window only leaves once the burn ends.
+      // Burn down over a deterministic duration, then finalize. The window only
+      // leaves once the burn ends.
+      const dur = (closePreset?.durationMs ?? 1000) / speedFactor;
       progressApi.set({ progress: 1 });
       progressApi.start({
         progress: 0,
-        config: scaleCfg(closePreset?.config ?? { tension: 90, friction: 20 }),
+        config: { duration: dur },
         onRest: () => {
           const a = useWindowAnimationStore.getState().anims[win.id];
           if (a?.status === 'closing') {

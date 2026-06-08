@@ -70,7 +70,8 @@ export interface ClosePreset {
   label: string;
   /** Wrapper style; progress 1 = intact, 0 = fully burned away. */
   style: (progress: number, dramatic: boolean) => CSSProperties;
-  config: AnimConfig;
+  /** Burn duration in ms (deterministic so the close always finalizes). */
+  durationMs: number;
   /** What to do when the burn finishes. */
   finalize: 'close' | 'quit';
   palette: ClosePalette;
@@ -82,7 +83,7 @@ export const CLOSE_PRESETS: Record<string, ClosePreset> = {
     id: 'ember-close',
     label: 'Ember Close',
     style: emberCloseStyle,
-    config: { tension: 95, friction: 21 },
+    durationMs: 850,
     finalize: 'close',
     palette: { glow: '#8fd0ff', ember: '#ffb45a' },
     baseEmbers: 8,
@@ -91,7 +92,7 @@ export const CLOSE_PRESETS: Record<string, ClosePreset> = {
     id: 'fire-quit',
     label: 'Fire Quit',
     style: fireQuitStyle,
-    config: { tension: 70, friction: 19 },
+    durationMs: 1150,
     finalize: 'quit',
     palette: { glow: '#ffd24a', ember: '#ff5a1a' },
     baseEmbers: 16,
