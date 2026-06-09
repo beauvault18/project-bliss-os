@@ -1095,3 +1095,49 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ===================== Angular shell layout (R0) ========================= */
+/* The WebGL desktop canvas sits behind everything. */
+.desktop-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Window layer is click-through except over actual windows. */
+.window-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+.window-layer .window {
+  position: absolute;
+  pointer-events: auto;
+}
+/* Taskbar launchers (quick-launch) + clock tray. */
+.taskbar__launchers {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+.taskbar__launchers .task {
+  max-width: none;
+  padding: 0 8px;
+}
+.systray {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #fff;
+  background: linear-gradient(180deg, #168ed6, #1376c4);
+  border-left: 1px solid #1c50c8;
+}
+.clock {
+  font: 700 0.82rem Tahoma, sans-serif;
+  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+}

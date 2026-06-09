@@ -1,23 +1,16 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import electron from 'vite-plugin-electron';
 
-// Single Vite build for the renderer:
-//   - React  → compiled by @vitejs/plugin-react
-//   - Angular → runs in JIT mode (compiled at runtime by @angular/compiler),
-//     so no Angular-specific build plugin is needed and there is no clash
-//     between two AOT compilers in one Vite pipeline.
-// Angular's @Component decorators are handled by esbuild via the
-// `experimentalDecorators` option in tsconfig.json.
+// Single Vite build for the renderer. Project Bliss OS is a PURE ANGULAR app:
+// Angular runs in JIT mode (templates compiled at runtime by @angular/compiler),
+// so no Angular build plugin is needed. esbuild handles the @Component
+// decorators via `experimentalDecorators` in tsconfig.json. Components use
+// inject()/signals (no constructor-type DI), so emitDecoratorMetadata isn't
+// required. No React plugin — there is no React in the tree anymore.
 export default defineConfig({
   root: '.',
   base: './',
   plugins: [
-    react({
-      // Angular components live under src/angular/** and must NOT go through
-      // React's Babel transform.
-      exclude: [/src\/angular\//],
-    }),
     electron([
       {
         // Main process
