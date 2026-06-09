@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { animated, useSpring } from '@react-spring/web';
+import { animated, useSpring, easings } from '@react-spring/web';
 import { useWindowStore } from '../core/windowStore';
 import {
   useWorkspaceStore,
@@ -12,9 +12,9 @@ import { getApp } from '../core/appRegistry';
 // onRest) keeps the cube's lifetime deterministic — it always tears down on
 // schedule, so it can never get stuck on screen.
 const CUBE_MS = {
-  slow: 1100,
-  normal: 720,
-  fast: 460,
+  slow: 1400,
+  normal: 950,
+  fast: 620,
 } as const;
 
 // How far the desktop "pulls back" and tilts while the cube spins.
@@ -55,7 +55,10 @@ export function WorkspaceCube() {
     const dur = CUBE_MS[speed];
     const delta = shortestDelta(spin.from, spin.to);
     api.set({ ry: 0 });
-    api.start({ ry: -delta * 90, config: { duration: dur } });
+    api.start({
+      ry: -delta * 90,
+      config: { duration: dur, easing: easings.easeInOutCubic },
+    });
     const timer = setTimeout(() => endSpin(), dur + 80);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
