@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { getApp } from './app-registry';
+import { WorkspaceStore } from './workspace-store';
 
 export interface Win {
   id: string;
@@ -24,6 +25,7 @@ export interface Win {
 @Injectable({ providedIn: 'root' })
 export class WindowStore {
   readonly windows = signal<Win[]>([]);
+  private workspaces = inject(WorkspaceStore);
   private seq = 0;
   private topZ = 1;
 
@@ -44,7 +46,7 @@ export class WindowStore {
       h: app.defaultSize.h,
       z,
       focused: true,
-      workspace: 0,
+      workspace: this.workspaces.active(),
     };
     this.windows.update((ws) => [...ws.map((w) => ({ ...w, focused: false })), win]);
     return id;
@@ -75,5 +77,12 @@ export class WindowStore {
 
   close(id: string): void {
     this.windows.update((ws) => ws.filter((w) => w.id !== id));
+  }
+
+  /** Reassign a window to another workspace (visibility-only move). */
+  moveToWorkspace(id: string, workspace: number): void {
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, workspace, focused: false } : w)),
+    );
   }
 }

@@ -2,12 +2,14 @@ import {
   AfterViewInit,
   Component,
   ElementRef,
+  HostListener,
   inject,
   OnDestroy,
   ViewChild,
 } from '@angular/core';
 import { DesktopScene } from '../three/desktop-scene';
 import { WindowStore, type Win } from '../ng/window-store';
+import { WorkspaceStore } from '../ng/workspace-store';
 import { WindowBodyDirective } from './window-body.directive';
 import { TaskbarComponent } from './taskbar.component';
 
@@ -39,8 +41,10 @@ import { TaskbarComponent } from './taskbar.component';
             [style.width.px]="w.w"
             [style.height.px]="w.h"
             [style.zIndex]="w.z"
+            [style.display]="w.workspace === ws.active() ? null : 'none'"
             data-testid="window"
             [attr.data-appid]="w.appId"
+            [attr.data-ws]="w.workspace"
             (pointerdown)="store.focus(w.id)"
           >
             <div
@@ -74,6 +78,7 @@ import { TaskbarComponent } from './taskbar.component';
 })
 export class DesktopComponent implements AfterViewInit, OnDestroy {
   readonly store = inject(WindowStore);
+  readonly ws = inject(WorkspaceStore);
   @ViewChild('bg') private bg!: ElementRef<HTMLCanvasElement>;
   private scene?: DesktopScene;
   private onResize = () => this.scene?.resize();
@@ -94,7 +99,24 @@ export class DesktopComponent implements AfterViewInit, OnDestroy {
       close: (id: string) => this.store.close(id),
       focus: (id: string) => this.store.focus(id),
       windows: () => this.store.windows(),
+      workspace: () => this.ws.active(),
+      switchWorkspace: (i: number) => this.ws.switchTo(i),
+      moveToWorkspace: (id: string, w: number) => this.store.moveToWorkspace(id, w),
     };
+  }
+
+  // Ctrl+Alt+Arrow switches workspaces (Ctrl+Shift+Arrow as an OS-safe fallback).
+  @HostListener('window:keydown', ['$event'])
+  onKey(e: KeyboardEvent): void {
+    if (e.ctrlKey && (e.altKey || e.shiftKey)) {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        this.ws.next();
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        this.ws.prev();
+      }
+    }
   }
 
   startDrag(w: Win, e: PointerEvent): void {

@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { APPS } from '../ng/app-registry';
 import { WindowStore } from '../ng/window-store';
+import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
 
 /** XP-style taskbar: Start button, one button per open window, and a clock. */
 @Component({
@@ -39,13 +40,36 @@ import { WindowStore } from '../ng/window-store';
           </button>
         }
       </div>
+      <div class="ws-indicator" data-testid="workspace-indicator">
+        @for (i of workspaceList; track i) {
+          <button
+            class="ws-pip"
+            [class.ws-pip--active]="i === ws.active()"
+            data-testid="workspace-pip"
+            [attr.data-ws]="i"
+            [title]="'Workspace ' + (i + 1)"
+            (click)="ws.switchTo(i)"
+          >
+            {{ i + 1 }}
+            @if (occupied(i)) {
+              <span class="ws-pip__dot" aria-hidden></span>
+            }
+          </button>
+        }
+      </div>
       <div class="systray"><span class="clock" data-testid="clock">{{ clock() }}</span></div>
     </div>
   `,
 })
 export class TaskbarComponent {
   readonly store = inject(WindowStore);
+  readonly ws = inject(WorkspaceStore);
   readonly apps = APPS;
+  readonly workspaceList = Array.from({ length: WORKSPACE_COUNT }, (_, i) => i);
+
+  occupied(i: number): boolean {
+    return this.store.windows().some((w) => w.workspace === i);
+  }
   readonly clock = computed(() => {
     const d = new Date();
     return `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2, '0')}`;

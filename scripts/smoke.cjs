@@ -93,6 +93,41 @@ app.whenReady().then(() => {
       })`);
       console.log('CLOSE ' + JSON.stringify({ beforeClose, afterClose }));
 
+      // --- R1a: workspaces (visibility-only; windows stay mounted) ----------
+      const wsBase = await run(`({
+        indicator: !!document.querySelector('[data-testid="workspace-indicator"]'),
+        pips: document.querySelectorAll('[data-testid="workspace-pip"]').length,
+        active: window.__bliss.workspace(),
+      })`);
+      // Switch to workspace 2 (idx 1): ws0 windows hide (display:none, still mounted).
+      await run(`window.__bliss.switchWorkspace(1)`);
+      await wait(200);
+      const onWs1 = await run(`(() => {
+        const np = document.querySelector('[data-appid="notepad"]');
+        return { active: window.__bliss.workspace(), notepadDisplay: np ? getComputedStyle(np).display : 'absent' };
+      })()`);
+      // New window opens on the active workspace (idx 1) and is visible here.
+      await run(`window.__bliss.open('calculator')`);
+      await wait(400);
+      const newWin = await run(`(() => {
+        const w = window.__bliss.windows().find(x => x.appId === 'calculator');
+        const el = document.querySelector('[data-appid="calculator"]');
+        return { ws: w ? w.workspace : null, display: el ? getComputedStyle(el).display : 'absent' };
+      })()`);
+      // Switch back to workspace 1 (idx 0): notepad returns, calculator hides.
+      await run(`window.__bliss.switchWorkspace(0)`);
+      await wait(200);
+      const back = await run(`(() => {
+        const np = document.querySelector('[data-appid="notepad"]');
+        const ca = document.querySelector('[data-appid="calculator"]');
+        return {
+          active: window.__bliss.workspace(),
+          notepadDisplay: np ? getComputedStyle(np).display : 'absent',
+          calcDisplay: ca ? getComputedStyle(ca).display : 'absent',
+        };
+      })()`);
+      console.log('WORKSPACE ' + JSON.stringify({ wsBase, onWs1, newWin, back }));
+
       console.log('ERRORS ' + JSON.stringify(errors));
       const ok =
         base.canvas && base.start && base.clock && base.bliss === 'object' && base.windows === 2 &&
@@ -100,6 +135,10 @@ app.whenReady().then(() => {
         calc === '15' &&
         fs.windows === 3 && fs.rows > 0 &&
         afterClose.windows === beforeClose - 1 && afterClose.calcGone === true &&
+        wsBase.indicator === true && wsBase.pips === 4 && wsBase.active === 0 &&
+        onWs1.active === 1 && onWs1.notepadDisplay === 'none' &&
+        newWin.ws === 1 && newWin.display === 'flex' &&
+        back.active === 0 && back.notepadDisplay === 'flex' && back.calcDisplay === 'none' &&
         errors.length === 0;
       console.log('VERDICT ' + (ok ? 'PASS' : 'FAIL'));
       app.exit(ok ? 0 : 2);
