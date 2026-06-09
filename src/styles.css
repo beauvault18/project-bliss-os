@@ -1141,3 +1141,52 @@ body {
   font: 700 0.82rem Tahoma, sans-serif;
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
 }
+
+/* ===================== Live-window cube (R1b) =========================== */
+/* The window layer is a 3D cube; at rest the active face sits square-on (1:1). */
+.cube-viewport {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  perspective: 1600px;
+  perspective-origin: 50% 45%;
+  pointer-events: none; /* only the active face's windows opt back in */
+}
+.cube {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+/* Each workspace is a full-screen face. Default (flat) transform-style means a
+   face's windows are flattened onto its plane — like a texture on the cube. */
+.cube-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+.cube-face .window {
+  position: absolute;
+  pointer-events: none;
+}
+.cube-face--active .window {
+  pointer-events: auto;
+}
+/* No interaction while the cube is rotating. */
+.cube-viewport--spin .window {
+  pointer-events: none !important;
+}
+
+/* Only the active face is visible at rest (no edge-on slivers peeking at the
+   screen edges); every face is shown while the cube is mid-rotation. */
+.cube-face {
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.cube-face--active {
+  opacity: 1;
+}
+.cube-viewport--spin .cube-face {
+  opacity: 1;
+  transition: none;
+}
