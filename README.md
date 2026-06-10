@@ -1,40 +1,48 @@
 # Project Bliss OS
 
-> *What if Windows XP had evolved with Compiz physics instead of dying?*
+> *A high-gloss Compiz-Fusion desktop, rebuilt for 2026 — a rotating workspace cube, wobbly windows, genie/fire lifecycle effects, a galaxy skybox with bloom, and live system telemetry.*
 
-An interactive desktop demo built in **Electron**: a real **WebGL** scene
-(three.js / react-three-fiber) renders the Bliss-wallpapered desktop, and
-**wobbly draggable windows** float above it. App windows are powered by **both
-React and Angular** — in the same app, side by side.
+An interactive **spatial desktop shell** built in **Electron** with a **pure, zoneless Angular 19** UI layer over a direct **Three.js** WebGL background. The workspace "cube" is a CSS‑3D layer that floats above a WebGL galaxy; windows are live, fully‑interactive DOM that wobble, pop off the cube faces in 3D, and animate through their whole lifecycle.
 
-## v1 features
+## Features
 
-- **XP desktop shell** — procedural Bliss wallpaper (WebGL, with pointer parallax), Luna taskbar, system tray + live clock.
-- **Wobbly draggable windows** — Compiz-style jelly: windows lean into motion, squash-and-stretch, and overshoot back to rest. Magnetic snapping to screen edges and neighboring windows.
-- **Living Start menu** — animated XP-style menu with search and one-click app launching.
-- **Dual-framework apps** — Notepad + Minesweeper (React); Calculator + File Explorer (Angular). Each Angular window is a standalone, zoneless, signal-only component.
+**Workspace cube & environment**
+- 4‑workspace **CSS‑3D cube** with a perspective camera, parallax + camera‑dolly synced to each spin
+- Procedural **galaxy skydome** + neon floor grid; a **see‑through glass cube** while rotating
+- **WebGL bloom** (`EffectComposer` / `UnrealBloomPass`), gated to hardware GL so it never destabilizes software rendering
+
+**Window management & physics**
+- **Edge‑flip** — drag a window past a screen edge to spin to the adjacent workspace, carrying it along
+- **Wobbly windows** — velocity‑driven skew with an underdamped‑spring snap‑back
+- **3D Z‑pop** — windows float off the cube faces during rotation (Compiz "3D Windows")
+- **Drag‑to‑resize**, **maximize/restore** (with tear‑loose), and a **focused‑window neon halo + lift**
+
+**Lifecycle effects**
+- **Genie** minimize/restore (suck into the taskbar), **fire** close (incinerate), and a **window‑open** map animation
+
+**Shell & apps**
+- A top glass **"Tube" panel** with an **Applications menu**, left‑aligned window list, and system tray
+- **Expo overview** — re‑project the cube into a 2×2 grid of live workspace thumbnails
+- Nine standalone apps (fractal engine, terminal, space tracker, market charts, media streamer, diagnostics + a calculator/notepad/file‑explorer)
+- **Conky** desktop widgets + **live CPU/RAM telemetry** over IPC (Node `os`, zero deps)
+
+**Engineering**
+- Per‑window **visibility gate** pauses off‑screen / minimized / backgrounded animation loops; the WebGL scene pauses when hidden
+- Headless **smoke suite** ([scripts/smoke.cjs](scripts/smoke.cjs)) that drives the whole app and polls for animation settle
 
 ## Architecture
 
 | Concern | Choice | Why |
 | --- | --- | --- |
-| Desktop scene | Orthographic react-three-fiber `<Canvas>` (1 unit = 1 px) | Real WebGL; trivial screen↔world math |
-| Windows | Live DOM via `drei <Html>`, anchored to 3D points | Content stays fully interactive |
-| Wobble | `@react-spring/web` skew/squash/overshoot driven by `@use-gesture` velocity | Convincing jelly without rasterizing DOM (which would kill interactivity) |
-| Window manager | `zustand` store | Single source of truth for position/size/z/focus |
-| React vs Angular | React owns scene + shell + window manager; Angular powers 2 apps | r3f is a React renderer; Angular does real work in its windows |
-| Angular mounting | `createApplication` + `createComponent(host)`, **zoneless** | Supports multiple instances; clean teardown; no zone.js |
+| UI framework | **Pure Angular 19, standalone, zoneless** (`provideExperimentalZonelessChangeDetection`) | Signals drive all change detection — no zone.js |
+| Compilation | **JIT** (`@angular/compiler` at runtime) | esbuild builds the renderer; decorator `@Input`s (signal inputs aren't wired in JIT) |
+| Background | **Three.js** directly (no react‑three‑fiber) | Perspective camera, galaxy, grid, bloom |
+| Workspace cube | **CSS‑3D** layer composited *on top of* the WebGL `<canvas>` | The two layers never share a coordinate space — the "compositor wall" is used deliberately for depth |
+| State | Signal stores — [`WindowStore`](src/ng/window-store.ts), [`WorkspaceStore`](src/ng/workspace-store.ts) | Single source of truth; every mutation returns a fresh array |
+| App hosting | [`window-body.directive.ts`](src/app/window-body.directive.ts) → `vcr.createComponent` | Each window body is a standalone app component, with a per‑window visibility signal |
+| Telemetry | `electron/main.ts` IPC (`get-system-stats`) → preload bridge | Real per‑core CPU + RAM with no external dependency |
 
-See [src/](src/) — notable files: [windowStore.ts](src/core/windowStore.ts),
-[DesktopScene.tsx](src/scene/DesktopScene.tsx), [WindowView.tsx](src/windows/WindowView.tsx),
-[AngularWindowHost.tsx](src/framework-bridges/AngularWindowHost.tsx).
-
-### Build constraints (don't break these)
-
-- **Angular runs in JIT** (`@angular/compiler` imported in [renderer.ts](src/renderer.ts)). Do **not** add `@analogjs/vite-plugin-angular` — two AOT compilers in one Vite build silently drop the bundle.
-- The React plugin **excludes `src/angular/**`** in [vite.config.ts](vite.config.ts). Angular components stay decorator-light and use `inject()` (no constructor DI) so esbuild needs no `emitDecoratorMetadata`.
-- CSP keeps `'unsafe-eval'` (required for Angular JIT). See [index.html](index.html).
-- Electron main/preload are CommonJS (no `"type": "module"`).
+Notable files: [desktop.component.ts](src/app/desktop.component.ts) (the cube engine + all interaction/animation), [desktop-scene.ts](src/three/desktop-scene.ts) (WebGL galaxy + bloom), [app-registry.ts](src/ng/app-registry.ts), [taskbar.component.ts](src/app/taskbar.component.ts).
 
 ## Getting started
 
@@ -45,21 +53,15 @@ npm run build    # production build → dist/ + dist-electron/
 npm run verify   # build, then run the headless smoke test
 ```
 
-> **Note:** `npm run dev` needs a GPU for WebGL. The smoke test
-> ([scripts/smoke.cjs](scripts/smoke.cjs)) forces software WebGL (SwiftShader)
-> so it runs headless. If your shell exports `ELECTRON_RUN_AS_NODE=1`, prefix
-> commands with `env -u ELECTRON_RUN_AS_NODE` so Electron launches a real window.
+> **Note:** if your shell exports `ELECTRON_RUN_AS_NODE=1`, prefix the run/verify
+> commands with `env -u ELECTRON_RUN_AS_NODE` so Electron launches a real window
+> instead of booting as plain Node. The smoke test forces software WebGL
+> (SwiftShader) so it runs headless.
 
 ## What the smoke test verifies
 
-WebGL canvas + taskbar mount · a React window renders · the Angular Calculator
-computes `7 + 8 = 15` (zoneless signals) · the Angular File Explorer navigates
-(DI service) · windows drag · closing and reopening an Angular window leaves no
-leaked roots · zero console errors.
+Boot (canvas + panel + `__bliss` control API) · the 6 seeded apps render on the right cube faces · calculator interactivity (`7 + 8 = 15`, zoneless signals) · file‑explorer DI · cube spin geometry · **edge‑flip + wobble** · **genie minimize/restore** · **fire close** · the **visibility gate** (off‑face loops freeze, on‑face run) · **live telemetry** over IPC · **Expo overview** · **resize / maximize / tear‑loose** · zero console errors.
 
-## Roadmap (future milestones)
+## Built with Claude Code
 
-3D workspace cube/sphere · "Bliss World" zoom (desktop → room → world) · live
-window-stack previews · AI side panel · physics-everywhere (elastic folders,
-throw-files-into-folders) · Mission Control. The architecture leaves seams for
-these (e.g. a workspace dimension in the window store).
+This project was developed iteratively with [Claude Code](https://claude.com/claude-code) — the full milestone history (R1 cube → R2 interaction → R3 lifecycle → Compiz polish → telemetry → window management) lives in the squashed commit and the development log.

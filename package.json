@@ -1,7 +1,7 @@
 {
   "name": "project-bliss-os",
   "version": "0.1.0",
-  "description": "Windows XP + Compiz + Modern UX — a WebGL desktop with wobbly windows, powered by both React and Angular in one Electron app",
+  "description": "A Compiz-Fusion spatial desktop in Electron — a CSS-3D workspace cube over a Three.js galaxy, wobbly windows, genie/fire lifecycle effects, bloom, and live telemetry. Pure zoneless Angular 19.",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
