@@ -163,41 +163,61 @@ body {
 .window {
   display: flex;
   flex-direction: column;
-  border: 1px solid #0831d9;
-  border-radius: 8px 8px 2px 2px;
+  /* Emerald-style frame: dark translucent edge + outer drop shadow + a thin
+     inner highlight bevel for the glossy 2010s aero look. Background is left to
+     each app (XP solid / cyber glass). */
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 8px 8px 4px 4px;
   background: #ece9d8;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  /* Unfocused: sits lower, dimmer (less lift, no halo). */
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
   overflow: hidden;
   will-change: transform;
+  transition: box-shadow 0.2s ease;
 }
 .window--focused {
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  /* Floating glowing box: a deep lift shadow + an electric-blue neon halo so the
+     focused window reads as a physical object hovering above the desktop. */
+  box-shadow:
+    0 26px 64px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(120, 200, 255, 0.45),
+    0 0 36px rgba(60, 175, 255, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42);
 }
 
 .titlebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 28px;
-  padding: 0 4px 0 8px;
+  height: 30px;
+  padding: 0 10px;
   color: #fff;
   font-weight: 700;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
   cursor: grab;
+  /* Classic Emerald gloss: light top half, hard 50% break, dark bottom half. */
   background: linear-gradient(
-    180deg,
-    #0997ff 0%,
-    #0053ee 8%,
-    #0831d9 40%,
-    #0053ee 88%,
-    #003ad6 100%
+    to bottom,
+    rgba(255, 255, 255, 0.38) 0%,
+    rgba(180, 195, 220, 0.16) 49%,
+    rgba(12, 16, 26, 0.55) 50%,
+    rgba(6, 9, 16, 0.72) 100%
   );
+  border-bottom: 1px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-radius: 7px 7px 0 0;
 }
 .titlebar:active {
   cursor: grabbing;
 }
 .titlebar--blurred {
-  background: linear-gradient(180deg, #7ba2e7 0%, #6079d0 50%, #5471c6 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(200, 205, 215, 0.2) 0%,
+    rgba(150, 160, 180, 0.1) 49%,
+    rgba(20, 24, 32, 0.45) 50%,
+    rgba(14, 18, 26, 0.6) 100%
+  );
 }
 .titlebar__name {
   display: flex;
@@ -239,75 +259,105 @@ body {
 }
 
 /* ----------------------------- Taskbar ----------------------------------- */
+/* Compiz/MATE "Tube" panel: a thin, full-width glass shell at the top. */
 .taskbar {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 40px;
+  top: 0;
+  height: 32px;
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
   z-index: 100000;
-  background: linear-gradient(
-    180deg,
-    #3168d5 0%,
-    #2459d4 9%,
-    #1941a5 18%,
-    #2459d4 92%,
-    #1c50c8 100%
-  );
-  border-top: 1px solid #1638a8;
+  background: rgba(8, 10, 16, 0.45);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  color: #e8eef6;
 }
 
-.start-button {
+.menu-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 22px 4px 12px;
-  border: none;
+  gap: 7px;
+  height: 24px;
+  padding: 0 12px;
+  flex: none;
   color: #fff;
-  font-style: italic;
-  font-weight: 700;
-  font-size: 1.05rem;
-  text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.45);
+  font-weight: 600;
+  font-size: 0.82rem;
   cursor: pointer;
-  border-radius: 0 12px 12px 0;
-  background: linear-gradient(180deg, #5eb84c 0%, #3c9a30 45%, #2f8025 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
 }
-.start-button:hover,
-.start-button--active {
-  filter: brightness(1.12);
+.menu-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
-.start-button__logo {
-  font-size: 1.1rem;
-  font-style: normal;
+.menu-btn__logo {
+  color: #00c8ff;
+  text-shadow: 0 0 6px rgba(0, 200, 255, 0.6);
 }
 
-.taskbar__tasks {
+.task-list {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 4px;
-  padding: 4px 6px;
   overflow: hidden;
 }
 .task {
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: 160px;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid #1c44ad;
-  border-radius: 3px;
-  color: #fff;
-  font-size: 0.8rem;
+  max-width: 190px;
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid transparent;
+  border-radius: 4px;
+  color: #dfe6f0;
+  font-size: 0.78rem;
   cursor: pointer;
-  background: linear-gradient(180deg, #3f7ae0, #245bd0);
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+.task:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 .task--active {
-  background: linear-gradient(180deg, #1b3f9e, #2a5ed0);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  background: rgba(255, 255, 255, 0.2);
+  border-top: 2px solid #00c8ff; /* focused-window indicator */
+}
+/* Minimized: dimmed + italic so you can tell it's tucked into the dock. */
+.task--minimized {
+  opacity: 0.6;
+  font-style: italic;
+}
+/* Per-task close ✕ — revealed on hover so even a minimized window (no reachable
+   titlebar) can be closed from the dock. */
+.task__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 0.7rem;
+  border-radius: 3px;
+  transition: opacity 0.12s ease, width 0.12s ease;
+}
+.task:hover .task__close {
+  width: 14px;
+  opacity: 0.85;
+}
+.task__close:hover {
+  opacity: 1;
+  background: rgba(220, 40, 40, 0.85);
 }
 .task__label {
   overflow: hidden;
@@ -315,18 +365,62 @@ body {
   white-space: nowrap;
 }
 
+/* Panel system tray (overview toggle, workspace pips, clock). */
 .tray {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px;
-  color: #fff;
+  flex: none;
+  margin-left: auto;
+  color: #e8eef6;
   font-size: 0.8rem;
-  background: linear-gradient(180deg, #168ed6, #1376c4);
-  border-left: 1px solid #1c50c8;
 }
-.tray__clock {
-  font-weight: 600;
+.task__icon {
+  flex: none;
+}
+
+/* Applications menu — a glass dropdown off the panel, off the app registry. */
+.apps-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 100001;
+}
+.apps-menu {
+  position: fixed;
+  top: 36px;
+  left: 8px;
+  z-index: 100002;
+  display: none;
+  flex-direction: column;
+  min-width: 210px;
+  padding: 6px;
+  background: rgba(10, 12, 20, 0.92);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
+}
+.apps-menu--open {
+  display: flex;
+}
+.apps-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #e8eef6;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+.apps-menu__item:hover {
+  background: rgba(120, 180, 255, 0.22);
+}
+.apps-menu__icon {
+  font-size: 1.1rem;
 }
 
 /* --------------------------- Start menu ---------------------------------- */
@@ -525,6 +619,51 @@ body {
   box-shadow: 0 0 10px rgba(150, 220, 255, 0.9);
 }
 
+/* Emerald window controls — glossy "traffic light" circles (glyph hidden). */
+.titlebar .rapid-btn {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  padding: 0;
+  margin-left: 7px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.8), 0 1px 1px rgba(0, 0, 0, 0.5);
+  font-size: 0; /* hide the ─ / ✕ glyphs */
+}
+.titlebar .rapid-btn[data-testid='win-min'] {
+  background: radial-gradient(circle at 35% 30%, #ffd770, #9c6a00);
+}
+.titlebar .rapid-btn[data-testid='win-max'] {
+  background: radial-gradient(circle at 35% 30%, #7dffa0, #0a7a32);
+}
+.titlebar .rapid-btn[data-testid='win-close'] {
+  background: radial-gradient(circle at 35% 30%, #ff8475, #8b0c00);
+}
+
+/* Drag-to-resize grip in the bottom-right corner of every window. */
+.resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 5;
+  background: linear-gradient(
+    135deg,
+    transparent 0 45%,
+    rgba(255, 255, 255, 0.55) 45% 55%,
+    transparent 55% 70%,
+    rgba(255, 255, 255, 0.4) 70% 80%,
+    transparent 80%
+  );
+}
+.titlebar .rapid-btn:hover {
+  filter: brightness(1.18);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
 /* ----------------------- Rapid Control menu ------------------------------ */
 .rcm-scrim {
   position: fixed;
@@ -626,6 +765,73 @@ body {
 }
 .window--glass .window__body {
   background: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* --------------------- Cyberpunk glass windows (R1c) --------------------- */
+/* The 6 R1c app windows drop their solid XP chrome so the app's own
+   translucent body and the WebGL skybox grid show through. XP apps stay solid. */
+.cube-face .window[data-appid='fractal-engine'],
+.cube-face .window[data-appid='system-terminal'],
+.cube-face .window[data-appid='space-tracker'],
+.cube-face .window[data-appid='market-charts'],
+.cube-face .window[data-appid='media-streamer'],
+.cube-face .window[data-appid='diagnostics'] {
+  background: transparent;
+  border: 1px solid rgba(120, 180, 255, 0.3);
+}
+.cube-face .window[data-appid='fractal-engine'] .window__body,
+.cube-face .window[data-appid='system-terminal'] .window__body,
+.cube-face .window[data-appid='space-tracker'] .window__body,
+.cube-face .window[data-appid='market-charts'] .window__body,
+.cube-face .window[data-appid='media-streamer'] .window__body,
+.cube-face .window[data-appid='diagnostics'] .window__body {
+  background: transparent;
+}
+/* Mirrored-floor wash: a soft reflection under every cube window. box-reflect
+   on the flat .window leaf never touches the cube's preserve-3d geometry. */
+.cube-face .window {
+  -webkit-box-reflect: below 2px linear-gradient(rgba(0, 0, 0, 0.32) 0%, transparent 55%);
+}
+
+/* Genie-minimized: held collapsed by the forward WAAPI animation; this is the
+   backstop that keeps it invisible and non-interactive (transform can't be used
+   here — the skew binding owns it). */
+.cube-face .window--minimized {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Fire-closing: lock interaction while the incineration plays (the WAAPI owns
+   the visual; we just stop clicks landing on the burning window). */
+.cube-face .window--closing {
+  pointer-events: none;
+}
+
+/* Conky-style desktop widgets: text painted on the active face, behind the
+   windows, non-interactive (drags pass through). */
+.conky {
+  position: absolute;
+  top: 72px;
+  right: 48px;
+  z-index: 0;
+  text-align: right;
+  pointer-events: none;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: 'Ubuntu', 'Segoe UI', sans-serif;
+  text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.85);
+}
+.conky__time {
+  margin: 0;
+  font-size: 64px;
+  font-weight: 200;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+.conky__line {
+  margin: 5px 0 0;
+  font-size: 13px;
+  font-family: 'Consolas', monospace;
+  opacity: 0.8;
 }
 
 /* ---------------------- Animation debug label ---------------------------- */
@@ -1181,12 +1387,55 @@ body {
    screen edges); every face is shown while the cube is mid-rotation. */
 .cube-face {
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.4, 1.2);
 }
 .cube-face--active {
   opacity: 1;
 }
+
+/* Expo overview: all faces shown as a clickable 2x2 grid of live thumbnails. */
+.cube-viewport--expo .cube-face {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+}
+.cube-viewport--expo .cube-face .window {
+  pointer-events: none; /* clicks select the workspace, not the window */
+}
+.cube-viewport--expo .cube-face::after {
+  /* hover/active outline affordance on the thumbnail */
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+  pointer-events: none;
+}
+.cube-viewport--expo .cube-face:hover::after {
+  border-color: rgba(130, 200, 255, 0.9);
+}
+.cube-viewport--expo .cube-face--active::after {
+  border-color: rgba(130, 200, 255, 0.45);
+}
 .cube-viewport--spin .cube-face {
   opacity: 1;
   transition: none;
+  /* Only while spinning: let windows float off the face on the Z-axis (Compiz
+     "3D Windows"). At rest the face stays flat — identical to before — so the
+     glass backdrop-filter (already disabled during the spin) is never affected. */
+  transform-style: preserve-3d;
+  /* See-through glass cube: a faint translucent fill + a glowing edge give the
+     box its structure, and you see the galaxy + popped windows through it as it
+     turns. Scoped to the spin → no tint on the flat desktop at rest. (Backfaces
+     stay culled — rendering all 8 sides would double the spin's compositing.) */
+  background: rgba(18, 36, 68, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(130, 200, 255, 0.4),
+    inset 0 0 90px rgba(60, 140, 255, 0.13);
+}
+/* backdrop-filter is costly mid-rotation (and pointless while blurring a moving
+   3D layer) — drop it during the spin so cube turns stay smooth. */
+.cube-viewport--spin .window * {
+  backdrop-filter: none !important;
 }

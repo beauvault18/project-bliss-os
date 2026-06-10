@@ -2,6 +2,12 @@ import type { Type } from '@angular/core';
 import { CalculatorApp } from '../apps/angular/calculator.app';
 import { FileExplorerApp } from '../apps/angular/file-explorer.app';
 import { NotepadApp } from '../apps/angular/notepad.app';
+import { FractalEngineApp } from '../apps/angular/fractal-engine.app';
+import { SystemTerminalApp } from '../apps/angular/system-terminal.app';
+import { SpaceTrackerApp } from '../apps/angular/space-tracker.app';
+import { MarketChartsApp } from '../apps/angular/market-charts.app';
+import { MediaStreamerApp } from '../apps/angular/media-streamer.app';
+import { DiagnosticsApp } from '../apps/angular/diagnostics.app';
 
 export interface AppDef {
   id: string;
@@ -36,6 +42,55 @@ export const APPS: AppDef[] = [
     icon: '📁',
     defaultSize: { w: 440, h: 320 },
     component: FileExplorerApp,
+    showOnDesktop: true,
+  },
+  // Cyberpunk UI modules (video layout).
+  {
+    id: 'fractal-engine',
+    title: 'XaoS',
+    icon: '🌀',
+    defaultSize: { w: 600, h: 480 },
+    component: FractalEngineApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'system-terminal',
+    title: 'Terminal Emulator',
+    icon: '🖥️',
+    defaultSize: { w: 800, h: 400 },
+    component: SystemTerminalApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'space-tracker',
+    title: 'Celestia Engine',
+    icon: '🪐',
+    defaultSize: { w: 700, h: 400 },
+    component: SpaceTrackerApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'market-charts',
+    title: 'Market Analytics',
+    icon: '📈',
+    defaultSize: { w: 700, h: 450 },
+    component: MarketChartsApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'media-streamer',
+    title: 'Media Engine',
+    icon: '🎛️',
+    defaultSize: { w: 800, h: 500 },
+    component: MediaStreamerApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'diagnostics',
+    title: 'Core Node Diagnostics',
+    icon: '🩺',
+    defaultSize: { w: 900, h: 600 },
+    component: DiagnosticsApp,
     showOnDesktop: true,
   },
 ];

@@ -8,6 +8,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     chrome: process.versions.chrome,
     node: process.versions.node,
   },
+  // Live system telemetry (real CPU/RAM from the main process).
+  getSystemStats: (): Promise<{
+    cores: number[];
+    cpu: number;
+    ramUsed: number;
+    ramTotal: number;
+  }> => ipcRenderer.invoke('get-system-stats'),
   // Full-screen demo mode. Returns the resulting fullscreen state.
   toggleFullscreen: (): Promise<boolean> =>
     ipcRenderer.invoke('window:toggle-fullscreen'),

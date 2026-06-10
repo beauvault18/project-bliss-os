@@ -15,6 +15,30 @@ export interface Win {
   focused: boolean;
   /** Virtual desktop (cube face) this window lives on. */
   workspace: number;
+  /** Compiz wobble: live skew distortion (deg), driven by drag velocity. */
+  skewX: number;
+  skewY: number;
+  /** Genie-minimized: held collapsed into the taskbar, still alive in the store. */
+  minimized: boolean;
+  /** Fire-closing: playing the incineration before removal (locks interaction). */
+  closing: boolean;
+  /** Maximized to fill the workspace; prevGeom holds the size to restore to. */
+  maximized: boolean;
+  prevGeom: { x: number; y: number; w: number; h: number } | null;
+}
+
+/** Smallest a window can be dragged down to when resizing. */
+export const MIN_WIN_W = 200;
+export const MIN_WIN_H = 140;
+
+/** Optional placement overrides for {@link WindowStore.open}. */
+export interface OpenOpts {
+  workspace?: number;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  title?: string;
 }
 
 /**
@@ -25,11 +49,14 @@ export interface Win {
 @Injectable({ providedIn: 'root' })
 export class WindowStore {
   readonly windows = signal<Win[]>([]);
+  /** A restore (un-minimize) request from the taskbar; the desktop watches this
+   *  and plays the reverse-genie, then clears it. Null = nothing pending. */
+  readonly restoreReq = signal<string | null>(null);
   private workspaces = inject(WorkspaceStore);
   private seq = 0;
   private topZ = 1;
 
-  open(appId: string): string {
+  open(appId: string, opts?: OpenOpts): string {
     const app = getApp(appId);
     if (!app) return '';
     const id = `win-${++this.seq}`;
@@ -38,15 +65,21 @@ export class WindowStore {
     const win: Win = {
       id,
       appId,
-      title: app.title,
+      title: opts?.title ?? app.title,
       icon: app.icon,
-      x: 140 + offset,
-      y: 90 + offset,
-      w: app.defaultSize.w,
-      h: app.defaultSize.h,
+      x: opts?.x ?? 140 + offset,
+      y: opts?.y ?? 90 + offset,
+      w: opts?.w ?? app.defaultSize.w,
+      h: opts?.h ?? app.defaultSize.h,
       z,
       focused: true,
-      workspace: this.workspaces.active(),
+      workspace: opts?.workspace ?? this.workspaces.active(),
+      skewX: 0,
+      skewY: 0,
+      minimized: false,
+      closing: false,
+      maximized: false,
+      prevGeom: null,
     };
     this.windows.update((ws) => [...ws.map((w) => ({ ...w, focused: false })), win]);
     return id;
@@ -75,6 +108,78 @@ export class WindowStore {
     );
   }
 
+  /** Resize a window (drag-handle), clamped to the minimum size. */
+  resize(id: string, w: number, h: number): void {
+    this.windows.update((ws) =>
+      ws.map((win) =>
+        win.id === id
+          ? { ...win, w: Math.max(MIN_WIN_W, w), h: Math.max(MIN_WIN_H, h) }
+          : win,
+      ),
+    );
+  }
+
+  /**
+   * Maximize a window to the given bounds (saving its current geometry), or
+   * restore it. Resizing/dragging a maximized window clears the flag.
+   */
+  toggleMaximize(id: string, bounds: { x: number; y: number; w: number; h: number }): void {
+    this.windows.update((ws) =>
+      ws.map((win) => {
+        if (win.id !== id) return win;
+        if (win.maximized && win.prevGeom) {
+          return { ...win, ...win.prevGeom, maximized: false, prevGeom: null };
+        }
+        return {
+          ...win,
+          prevGeom: { x: win.x, y: win.y, w: win.w, h: win.h },
+          ...bounds,
+          maximized: true,
+        };
+      }),
+    );
+  }
+
+  /** Drop the maximized flag without changing geometry (e.g. on manual drag/resize). */
+  unmaximize(id: string): void {
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id && w.maximized ? { ...w, maximized: false, prevGeom: null } : w)),
+    );
+  }
+
+  /** Set a window's wobble skew (deg). Driven by the drag loop's velocity and
+   *  by the snap-back spring on release. */
+  setSkew(id: string, skewX: number, skewY: number): void {
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, skewX, skewY } : w)),
+    );
+  }
+
+  /** Mark a window minimized (true after the genie suck-in, false on restore). */
+  setMinimized(id: string, minimized: boolean): void {
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, minimized } : w)),
+    );
+  }
+
+  /** Flag a window as incinerating so it locks while the fire-close plays. The
+   *  actual removal is {@link close}, called when the animation finishes. */
+  setClosing(id: string): void {
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, closing: true } : w)),
+    );
+  }
+
+  /** Ask the desktop to restore (reverse-genie) a minimized window. */
+  requestRestore(id: string): void {
+    this.restoreReq.set(id);
+  }
+
+  /** Clear a handled restore request. */
+  endRestore(): void {
+    this.restoreReq.set(null);
+  }
+
   close(id: string): void {
     this.windows.update((ws) => ws.filter((w) => w.id !== id));
   }
@@ -83,6 +188,18 @@ export class WindowStore {
   moveToWorkspace(id: string, workspace: number): void {
     this.windows.update((ws) =>
       ws.map((w) => (w.id === id ? { ...w, workspace, focused: false } : w)),
+    );
+  }
+
+  /**
+   * Carry a window to another workspace during an edge-flip drag, keeping it
+   * focused and on top. Unlike {@link moveToWorkspace}, position is left to the
+   * drag loop, which keeps the window glued to the cursor on the new face.
+   */
+  dragToWorkspace(id: string, workspace: number): void {
+    const z = ++this.topZ;
+    this.windows.update((ws) =>
+      ws.map((w) => (w.id === id ? { ...w, workspace, focused: true, z } : { ...w, focused: false })),
     );
   }
 }

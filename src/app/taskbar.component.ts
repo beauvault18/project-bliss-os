@@ -1,63 +1,93 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { APPS } from '../ng/app-registry';
-import { WindowStore } from '../ng/window-store';
+import { WindowStore, type Win } from '../ng/window-store';
 import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
 
-/** XP-style taskbar: Start button, one button per open window, and a clock. */
+/**
+ * Compiz/MATE-style "Tube" panel: a full-width glass shell at the top with an
+ * Applications menu (off the app registry), a left-aligned window list, and a
+ * system tray (overview toggle, workspace pips, clock).
+ */
 @Component({
   selector: 'app-taskbar',
   standalone: true,
   template: `
     <div class="taskbar">
-      <button class="start-button" data-testid="start-button">
-        <span class="start-button__logo" aria-hidden>⊞</span>
-        start
+      <button class="menu-btn" data-testid="start-button" (click)="toggleMenu()">
+        <span class="menu-btn__logo" aria-hidden>◈</span>
+        Applications
       </button>
-      <div class="taskbar__tasks">
+
+      <div class="task-list">
         @for (w of store.windows(); track w.id) {
           <button
             class="task"
             [class.task--active]="w.focused"
+            [class.task--minimized]="w.minimized"
             data-testid="task-button"
             [attr.data-appid]="w.appId"
-            (click)="store.focus(w.id)"
+            [attr.data-taskwin]="w.id"
+            (click)="onTask(w)"
           >
-            <span aria-hidden>{{ w.icon }}</span>
+            <span class="task__icon" aria-hidden>{{ w.icon }}</span>
             <span class="task__label">{{ w.title }}</span>
+            <span
+              class="task__close"
+              data-testid="task-close"
+              title="Close"
+              (click)="closeTask(w, $event)"
+            >✕</span>
           </button>
         }
       </div>
-      <div class="taskbar__launchers">
-        @for (a of apps; track a.id) {
-          <button
-            class="task"
-            data-testid="launcher"
-            [attr.data-appid]="a.id"
-            [title]="a.title"
-            (click)="store.openOrFocus(a.id)"
-          >
-            <span aria-hidden>{{ a.icon }}</span>
-          </button>
-        }
+
+      <div class="tray">
+        <button
+          class="ws-pip ws-pip--expo"
+          [class.ws-pip--active]="ws.mode() === 'EXPO'"
+          data-testid="expo-toggle"
+          title="Overview (Ctrl+Alt+Up)"
+          (click)="ws.toggleExpo()"
+        >
+          ▦
+        </button>
+        <div class="ws-indicator" data-testid="workspace-indicator">
+          @for (i of workspaceList; track i) {
+            <button
+              class="ws-pip"
+              [class.ws-pip--active]="i === ws.active()"
+              data-testid="workspace-pip"
+              [attr.data-ws]="i"
+              [title]="'Workspace ' + (i + 1)"
+              (click)="ws.switchTo(i)"
+            >
+              {{ i + 1 }}
+              @if (occupied(i)) {
+                <span class="ws-pip__dot" aria-hidden></span>
+              }
+            </button>
+          }
+        </div>
+        <span class="clock" data-testid="clock">{{ clock() }}</span>
       </div>
-      <div class="ws-indicator" data-testid="workspace-indicator">
-        @for (i of workspaceList; track i) {
-          <button
-            class="ws-pip"
-            [class.ws-pip--active]="i === ws.active()"
-            data-testid="workspace-pip"
-            [attr.data-ws]="i"
-            [title]="'Workspace ' + (i + 1)"
-            (click)="ws.switchTo(i)"
-          >
-            {{ i + 1 }}
-            @if (occupied(i)) {
-              <span class="ws-pip__dot" aria-hidden></span>
-            }
-          </button>
-        }
-      </div>
-      <div class="systray"><span class="clock" data-testid="clock">{{ clock() }}</span></div>
+    </div>
+
+    @if (menuOpen()) {
+      <div class="apps-scrim" (click)="menuOpen.set(false)"></div>
+    }
+    <!-- Always in the DOM (CSS-hidden when closed) so launchers stay queryable. -->
+    <div class="apps-menu" [class.apps-menu--open]="menuOpen()">
+      @for (a of apps; track a.id) {
+        <button
+          class="apps-menu__item"
+          data-testid="launcher"
+          [attr.data-appid]="a.id"
+          (click)="launch(a.id)"
+        >
+          <span class="apps-menu__icon" aria-hidden>{{ a.icon }}</span>
+          {{ a.title }}
+        </button>
+      }
     </div>
   `,
 })
@@ -66,6 +96,29 @@ export class TaskbarComponent {
   readonly ws = inject(WorkspaceStore);
   readonly apps = APPS;
   readonly workspaceList = Array.from({ length: WORKSPACE_COUNT }, (_, i) => i);
+  readonly menuOpen = signal(false);
+
+  toggleMenu(): void {
+    this.menuOpen.update((v) => !v);
+  }
+
+  /** Open (or focus) an app from the Applications menu, then close the menu. */
+  launch(id: string): void {
+    this.store.openOrFocus(id);
+    this.menuOpen.set(false);
+  }
+
+  /** Click a task: restore it if minimized (reverse-genie), else focus it. */
+  onTask(w: Win): void {
+    if (w.minimized) this.store.requestRestore(w.id);
+    else this.store.focus(w.id);
+  }
+
+  /** The task's ✕: close even when minimized (no titlebar reachable then). */
+  closeTask(w: Win, e: Event): void {
+    e.stopPropagation();
+    this.store.close(w.id);
+  }
 
   occupied(i: number): boolean {
     return this.store.windows().some((w) => w.workspace === i);
