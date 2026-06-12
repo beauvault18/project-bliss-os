@@ -8,6 +8,9 @@ import { SpaceTrackerApp } from '../apps/angular/space-tracker.app';
 import { MarketChartsApp } from '../apps/angular/market-charts.app';
 import { MediaStreamerApp } from '../apps/angular/media-streamer.app';
 import { DiagnosticsApp } from '../apps/angular/diagnostics.app';
+import { SettingsApp } from '../apps/angular/settings.app';
+import { BlissAiApp } from '../apps/angular/bliss-ai.app';
+import { SynthApp } from '../apps/angular/synth.app';
 
 export interface AppDef {
   id: string;
@@ -17,6 +20,8 @@ export interface AppDef {
   /** Standalone, zoneless Angular component shown as the window body. */
   component: Type<unknown>;
   showOnDesktop?: boolean;
+  /** Only one instance ever — launching focuses the existing window. */
+  singleton?: boolean;
 }
 
 export const APPS: AppDef[] = [
@@ -92,6 +97,31 @@ export const APPS: AppDef[] = [
     defaultSize: { w: 900, h: 600 },
     component: DiagnosticsApp,
     showOnDesktop: true,
+  },
+  {
+    id: 'synth',
+    title: 'BlissWave Synth',
+    icon: '🎹',
+    defaultSize: { w: 620, h: 420 },
+    component: SynthApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'bliss-ai',
+    title: 'Bliss AI',
+    icon: '🤖',
+    defaultSize: { w: 480, h: 560 },
+    component: BlissAiApp,
+    showOnDesktop: true,
+  },
+  {
+    id: 'settings',
+    title: 'Control Center',
+    icon: '⚙️',
+    defaultSize: { w: 560, h: 620 },
+    component: SettingsApp,
+    showOnDesktop: true,
+    singleton: true,
   },
 ];
 

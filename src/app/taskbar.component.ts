@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { APPS } from '../ng/app-registry';
 import { WindowStore, type Win } from '../ng/window-store';
 import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
+import { HeadTrackingService } from '../ng/head-tracking.service';
 
 /**
  * Compiz/MATE-style "Tube" panel: a full-width glass shell at the top with an
@@ -28,6 +29,8 @@ import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
             [attr.data-appid]="w.appId"
             [attr.data-taskwin]="w.id"
             (click)="onTask(w)"
+            (mouseenter)="peekStart(w)"
+            (mouseleave)="peekEnd()"
           >
             <span class="task__icon" aria-hidden>{{ w.icon }}</span>
             <span class="task__label">{{ w.title }}</span>
@@ -42,6 +45,18 @@ import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
       </div>
 
       <div class="tray">
+        @if (headTrack.active()) {
+          <span class="cam-dot" title="Head tracking active — camera on (Control Center to disable)">📷</span>
+        }
+        <button
+          class="ws-pip ws-pip--expo"
+          [class.ws-pip--active]="ws.mode() === 'FREE'"
+          data-testid="free-toggle"
+          title="Hold the cube (Ctrl+Alt+Down)"
+          (click)="ws.requestFreeLook()"
+        >
+          ◳
+        </button>
         <button
           class="ws-pip ws-pip--expo"
           [class.ws-pip--active]="ws.mode() === 'EXPO'"
@@ -94,6 +109,7 @@ import { WorkspaceStore, WORKSPACE_COUNT } from '../ng/workspace-store';
 export class TaskbarComponent {
   readonly store = inject(WindowStore);
   readonly ws = inject(WorkspaceStore);
+  readonly headTrack = inject(HeadTrackingService);
   readonly apps = APPS;
   readonly workspaceList = Array.from({ length: WORKSPACE_COUNT }, (_, i) => i);
   readonly menuOpen = signal(false);
@@ -122,6 +138,19 @@ export class TaskbarComponent {
 
   occupied(i: number): boolean {
     return this.store.windows().some((w) => w.workspace === i);
+  }
+
+  /** Taskbar peek: after a 350 ms hover, dim every other window on the face
+   *  so the hovered task's window stands out (opacity/filter only — never
+   *  transform, which the skew binding owns). */
+  private peekTimer?: ReturnType<typeof setTimeout>;
+  peekStart(w: Win): void {
+    clearTimeout(this.peekTimer);
+    this.peekTimer = setTimeout(() => this.store.peekId.set(w.id), 350);
+  }
+  peekEnd(): void {
+    clearTimeout(this.peekTimer);
+    this.store.peekId.set(null);
   }
   readonly clock = computed(() => {
     const d = new Date();

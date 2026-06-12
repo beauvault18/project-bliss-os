@@ -3,6 +3,7 @@ import { getApp } from '../ng/app-registry';
 import { WindowStore } from '../ng/window-store';
 import { WorkspaceStore } from '../ng/workspace-store';
 import { PageVisibilityService, WINDOW_VISIBLE } from '../ng/window-visibility';
+import { WINDOW_PARAMS } from '../ng/window-params';
 
 /**
  * Hosts an app's standalone Angular component inside a window body. Uses a
@@ -29,11 +30,18 @@ export class WindowBodyDirective implements OnInit {
     const visible = computed(
       () => {
         const w = this.store.windows().find((x) => x.id === winId);
-        return !!w && !w.minimized && w.workspace === this.ws.active() && !this.pv.hidden();
+        // In Free-Look every face is on display, so every app stays live —
+        // the floating cube reads as a real machine, not a screenshot.
+        const onShow = !!w && (w.workspace === this.ws.active() || this.ws.mode() === 'FREE');
+        return !!w && !w.minimized && onShow && !this.pv.hidden();
       },
     );
+    const params = this.store.windows().find((x) => x.id === winId)?.params ?? {};
     const injector = Injector.create({
-      providers: [{ provide: WINDOW_VISIBLE, useValue: visible }],
+      providers: [
+        { provide: WINDOW_VISIBLE, useValue: visible },
+        { provide: WINDOW_PARAMS, useValue: params },
+      ],
       parent: this.vcr.injector,
     });
     this.vcr.createComponent(def.component, { injector });

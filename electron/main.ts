@@ -1,6 +1,6 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, session, systemPreferences } from 'electron';
 import path from 'node:path';
-import os from 'node:os';
+import { registerAllIpc } from './ipc/index';
 
 // The Electron main/preload processes are bundled to CommonJS (see package.json
 // has no "type": "module"), so __dirname is available as a CJS global.
@@ -35,51 +35,26 @@ function createWindow(): void {
   }
 }
 
-// --- Live system telemetry IPC ------------------------------------------
-// Real per-core CPU load + memory from Node's built-in `os` (no external deps).
-// CPU usage needs two samples of the cpu times; we keep the previous sample and
-// report the load over the interval between calls.
-let prevTimes = os.cpus().map((c) => ({ ...c.times }));
-ipcMain.handle('get-system-stats', () => {
-  const cpus = os.cpus();
-  const cores = cpus.map((c, i) => {
-    const p = prevTimes[i] ?? c.times;
-    const t = c.times;
-    const idle = t.idle - p.idle;
-    const total =
-      t.user - p.user + (t.nice - p.nice) + (t.sys - p.sys) + idle + (t.irq - p.irq);
-    return total > 0 ? Math.max(0, Math.min(100, (1 - idle / total) * 100)) : 0;
-  });
-  prevTimes = cpus.map((c) => ({ ...c.times }));
-  const totalmem = os.totalmem();
-  const freemem = os.freemem();
-  return {
-    cores, // per-core load %
-    cpu: cores.reduce((a, b) => a + b, 0) / (cores.length || 1),
-    ramUsed: totalmem - freemem,
-    ramTotal: totalmem,
-  };
-});
-
-// --- Full-screen demo mode IPC ------------------------------------------
-ipcMain.handle('window:toggle-fullscreen', (e) => {
-  const win = BrowserWindow.fromWebContents(e.sender) ?? mainWindow;
-  if (!win) return false;
-  win.setFullScreen(!win.isFullScreen());
-  return win.isFullScreen();
-});
-ipcMain.handle('window:set-fullscreen', (e, value: boolean) => {
-  const win = BrowserWindow.fromWebContents(e.sender) ?? mainWindow;
-  if (!win) return false;
-  win.setFullScreen(!!value);
-  return win.isFullScreen();
-});
-ipcMain.handle('window:is-fullscreen', (e) => {
-  const win = BrowserWindow.fromWebContents(e.sender) ?? mainWindow;
-  return win ? win.isFullScreen() : false;
-});
+// All IPC handlers live in electron/ipc/ — a shared module that the smoke
+// harness (scripts/smoke.cjs) registers from the SAME built bundle, so the
+// handlers under test never drift from the handlers that ship.
+registerAllIpc({ getMainWindow: () => mainWindow });
 
 app.whenReady().then(() => {
+  // Renderer permission policy: the camera (head-tracking parallax) is the
+  // ONLY grantable permission; everything else is denied outright.
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, cb) => {
+    cb(permission === 'media');
+  });
+  // macOS TCC: getUserMedia alone does NOT reliably raise the OS camera
+  // prompt — without this, Chromium can hand back a stream that delivers
+  // zero frames. Ask explicitly while access is undetermined.
+  if (process.platform === 'darwin') {
+    if (systemPreferences.getMediaAccessStatus('camera') === 'not-determined') {
+      void systemPreferences.askForMediaAccess('camera');
+    }
+  }
+
   createWindow();
 
   app.on('activate', () => {

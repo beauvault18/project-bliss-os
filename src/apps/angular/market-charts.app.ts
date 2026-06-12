@@ -61,6 +61,23 @@ const COUNT = 48;
       .down {
         color: #d83a52;
       }
+      .src {
+        font: bold 10px/1 var(--font-mono, monospace);
+        letter-spacing: 0.08em;
+        padding: 3px 7px;
+        border-radius: 3px;
+        margin-left: 10px;
+        vertical-align: 2px;
+      }
+      .src--live {
+        color: #06281a;
+        background: #2ec27e;
+        box-shadow: 0 0 8px rgba(46, 194, 126, 0.7);
+      }
+      .src--sim {
+        color: #cfd6e0;
+        background: rgba(255, 255, 255, 0.14);
+      }
       .bars {
         flex: 1;
         display: flex;
@@ -94,7 +111,11 @@ const COUNT = 48;
   template: `
     <div class="chart">
       <div class="head">
-        <span class="sym">BTC/USDT · 1m</span>
+        <span class="sym"
+          >BTC/USDT · 1m<span class="src" [class.src--live]="live()" [class.src--sim]="!live()" data-testid="market-src">{{
+            live() ? 'LIVE' : 'SIM'
+          }}</span></span
+        >
         <span class="price" [class.up]="last().close >= last().open" [class.down]="last().close < last().open">
           {{ priceLabel() }}
         </span>
@@ -122,7 +143,11 @@ export class MarketChartsApp implements OnDestroy {
   readonly Math = Math; // expose to template for clamp math
   readonly candles = signal<Candle[]>([]);
   readonly last = signal<Candle>({ open: 64000, close: 64000, high: 64000, low: 64000 });
+  /** True when the tape is the real Binance feed (via market:candles in main);
+   *  false = the deterministic SIM walk (offline / browser / fetch failure). */
+  readonly live = signal(false);
   private timer: ReturnType<typeof setInterval>;
+  private liveTimer?: ReturnType<typeof setInterval>;
   private price = 64000;
   private lo = 0;
   private hi = 1;
@@ -135,13 +160,35 @@ export class MarketChartsApp implements OnDestroy {
     this.candles.set(init);
     this.recalcRange(init);
     this.timer = setInterval(() => {
-      if (!this.visible()) return; // no tick when off-face/minimized/hidden
+      if (!this.visible() || this.live()) return; // SIM tape only while not live
       this.candles.update((cs) => {
         const next = [...cs.slice(1), this.step()];
         this.recalcRange(next);
         return next;
       });
     }, 700);
+    // Try the real feed (main-process fetch, cached); fall back silently.
+    const poll = async () => {
+      if (!this.visible()) return;
+      const api = window.electronAPI?.market;
+      if (!api) return;
+      try {
+        const res = await api.candles({ symbol: 'BTCUSDT', interval: '1m' });
+        if (res.source === 'live' && res.candles.length) {
+          const cs = res.candles.slice(-COUNT);
+          this.candles.set(cs);
+          this.last.set(cs[cs.length - 1]);
+          this.recalcRange(cs);
+          this.live.set(true);
+        } else {
+          this.live.set(false);
+        }
+      } catch {
+        this.live.set(false);
+      }
+    };
+    void poll();
+    this.liveTimer = setInterval(() => void poll(), 20_000);
   }
 
   /** Deterministic PRNG — Math.random is unavailable in some build/CI envs. */
@@ -179,5 +226,6 @@ export class MarketChartsApp implements OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
+    clearInterval(this.liveTimer);
   }
 }

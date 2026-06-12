@@ -1,30 +1,40 @@
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import type { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { ShaderSky, buildCanvasGalaxy } from './sky';
+import { ShaderFloor, FLOOR_Y, MAX_LIGHTS, type FloorLight } from './floor';
+import { DustParticles, ShootingStars } from './particles';
+import { AuroraRibbons, SynthSun } from './aurora';
+import { buildPost, type PostPipeline } from './post';
+import { TIERS, isSoftwareGL, FpsGovernor, type Tier } from './quality';
+import { BLISS_PALETTE, toColors, type ScenePaletteColors, type ScenePaletteInput } from './palette';
+import { reducedMotion } from '../ng/motion';
 
 /**
  * The WebGL desktop background, written directly against Three.js (no R3F).
  *
- * R1c: the flat ortho sky becomes a 3D cyberpunk environment the CSS-3D cube is
- * suspended inside. A perspective camera sits at the origin looking down -Z; a
- * wireframe dome, a receding neon floor grid and a ring of wireframe "buildings"
- * give the panoramic city-grid look. The whole environment eases its Y-rotation
- * toward `PARALLAX * cubeAngle` (fed from the workspace store via
- * {@link setCubeRotation}) so the world parallaxes as you turn between faces.
+ * Scene 2.0: a quality-tiered, theme-reactive environment the CSS-3D cube is
+ * suspended inside. A perspective camera at the origin looks down -Z; the
+ * world is assembled from self-contained modules —
+ *   sky        shader nebula (HIGH+) or themed canvas galaxy (LOW/MED)
+ *   floor      fwidth-antialiased neon grid + horizon fog + window lights
+ *   particles  GPU dust (warp-streaked during spins) + shooting stars
+ *   set pieces aurora ribbons / synthwave sun / digital rain (theme flags)
+ *   post       UnrealBloom + grade pass (chromatic aberration, grain, vignette)
+ * Every module lerps its uniforms toward the active ScenePalette each frame,
+ * so switching themes morphs the whole world over ~1 s.
  *
- * The gradient sky is still a fullscreen quad drawn in clip space (it ignores
- * the camera entirely), so it survived the ortho→perspective swap unchanged.
+ * Contracts preserved from v1: SwiftShader pins tier LOW with NO composer
+ * (`composer === undefined` → direct render); the camera only ever moves on
+ * Z; the environment eases its Y-rotation toward PARALLAX × the cube angle.
  */
 const PARALLAX = 0.15;
+const PALETTE_LERP = 0.04;
 
 export class DesktopScene {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private camera: THREE.PerspectiveCamera;
   private env = new THREE.Group();
-  private stars: THREE.Points;
   private raf = 0;
   private running = false;
   private targetRot = 0; // eased toward; set from the cube angle
@@ -34,11 +44,47 @@ export class DesktopScene {
   private dollyDepth = 0;
   private baseZoom = 0; // persistent camera pull-back target (e.g. Expo overview)
   private baseZ = 0; // eased current value of baseZoom
-  private composer?: EffectComposer; // bloom pipeline; undefined if GL can't support it
+  private composer?: EffectComposer; // undefined = direct render (the contract)
+
+  // --- modules ---
+  private gradientQuad: THREE.Mesh;
+  private gradientMat: THREE.ShaderMaterial;
+  private canvasSky?: THREE.Mesh;
+  private shaderSky?: ShaderSky;
+  private floor: ShaderFloor;
+  private dust?: DustParticles;
+  private shooting?: ShootingStars;
+  private aurora?: AuroraRibbons;
+  private sun?: SynthSun;
+  private buildings: THREE.Group;
+  private buildingMat: THREE.LineBasicMaterial;
+  private stars: THREE.Points;
+  private starMat: THREE.PointsMaterial;
+  private post?: PostPipeline;
+
+  // --- state ---
+  private palette: ScenePaletteColors = toColors(BLISS_PALETTE);
+  private readonly software: boolean;
+  private tier: Tier;
+  private qualitySetting: 'auto' | Tier = 'auto';
+  private governor?: FpsGovernor;
+  private time = 0;
+  private lastNow = 0;
+  private aberrStart = -1;
+  private aberrDur = 0;
+  // Head-coupled parallax targets (eased in the loop like everything else).
+  private headTX = 0;
+  private headTY = 0;
+  private headTZ = 0;
+  private headX = 0;
+  private headY = 0;
+  private headZ = 0;
 
   constructor(private canvas: HTMLCanvasElement) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.software = isSoftwareGL(this.renderer);
+    this.tier = this.software ? 'low' : 'med';
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, TIERS[this.tier].dprCap));
 
     const w = canvas.clientWidth || window.innerWidth;
     const h = canvas.clientHeight || window.innerHeight;
@@ -46,190 +92,93 @@ export class DesktopScene {
     this.camera.position.set(0, 0, 0);
     this.camera.lookAt(0, 0, -1);
 
-    // Gradient sky as a fullscreen clip-space quad behind everything. Camera
-    // independent — gl_Position is written directly in NDC.
-    const sky = new THREE.Mesh(
-      new THREE.PlaneGeometry(2, 2),
-      new THREE.ShaderMaterial({
-        depthTest: false,
-        depthWrite: false,
-        uniforms: {},
-        vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }`,
-        fragmentShader: `
-          varying vec2 vUv;
-          void main(){
-            vec3 top = vec3(0.04, 0.10, 0.30);
-            vec3 bot = vec3(0.01, 0.03, 0.12);
-            vec3 col = mix(bot, top, smoothstep(0.0, 1.0, vUv.y));
-            float glow = smoothstep(0.55, 0.0, distance(vUv, vec2(0.5, 0.30)));
-            col += glow * vec3(0.10, 0.20, 0.45);
-            gl_FragColor = vec4(col, 1.0);
-          }
-        `,
-      }),
-    );
-    sky.frustumCulled = false;
-    sky.renderOrder = -10;
-    this.scene.add(sky);
+    // Deep-space gradient as a fullscreen clip-space quad behind everything —
+    // camera independent (gl_Position written directly in NDC), themed.
+    this.gradientMat = new THREE.ShaderMaterial({
+      depthTest: false,
+      depthWrite: false,
+      uniforms: {
+        uTop: { value: new THREE.Color('#0a1a4d') },
+        uBot: { value: new THREE.Color('#03081f') },
+      },
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.999, 1.0); }`,
+      fragmentShader: `
+        varying vec2 vUv;
+        uniform vec3 uTop, uBot;
+        void main(){
+          vec3 col = mix(uBot, uTop, smoothstep(0.0, 1.0, vUv.y));
+          float glow = smoothstep(0.55, 0.0, distance(vUv, vec2(0.5, 0.30)));
+          col += glow * uTop * 0.5;
+          gl_FragColor = vec4(col, 1.0);
+        }
+      `,
+    });
+    this.gradientQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.gradientMat);
+    this.gradientQuad.frustumCulled = false;
+    this.gradientQuad.renderOrder = -10;
+    this.scene.add(this.gradientQuad);
 
-    this.buildEnvironment();
-    this.stars = this.buildStars();
-    this.env.add(this.stars);
-    this.scene.add(this.env);
+    // Permanent fixtures (all tiers): floor grid, skyline ring, 3D starfield.
+    this.floor = new ShaderFloor();
+    this.env.add(this.floor.mesh);
 
-    this.resize();
-    this.initBloom();
-  }
-
-  /**
-   * Post-processing bloom: only the brightest pixels (stars + neon grid) glow,
-   * giving the galaxy that emissive Compiz halo. Wrapped in try/catch so a GL
-   * that can't build the float render targets falls back to a direct render
-   * instead of crashing the scene.
-   */
-  private initBloom(): void {
-    try {
-      // Bloom is multi-pass and expensive; skip it on software GL (SwiftShader),
-      // where it would dominate the frame budget. Real GPUs get the full effect.
-      const gl = this.renderer.getContext();
-      const dbg = gl.getExtension('WEBGL_debug_renderer_info');
-      const name = String(
-        (dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) || '',
-      );
-      if (/swiftshader|software|llvmpipe/i.test(name)) return; // → composer stays undefined
-      const w = window.innerWidth;
-      const h = window.innerHeight;
-      const composer = new EffectComposer(this.renderer);
-      composer.setPixelRatio(Math.min(devicePixelRatio, 2));
-      composer.setSize(w, h);
-      composer.addPass(new RenderPass(this.scene, this.camera));
-      // (resolution, strength, radius, threshold) — tuned so stars + neon grid
-      // lines glow without the dim nebula washing into a haze.
-      composer.addPass(new UnrealBloomPass(new THREE.Vector2(w, h), 1.35, 0.55, 0.62));
-      composer.addPass(new OutputPass());
-      this.composer = composer;
-    } catch (e) {
-      console.warn('Bloom unavailable — rendering without post-processing.', e);
-      this.composer = undefined;
-    }
-  }
-
-  /** Galaxy skydome + receding floor grid + a horizon ring of "buildings". */
-  private buildEnvironment(): void {
-    // Procedural galaxy panorama enclosing the scene (replaces the wireframe sky).
-    this.env.add(this.buildGalaxy());
-
-    // Neon floor grids, stacked near/far for depth. GridHelper lines recede to
-    // the horizon under the perspective camera → strong parallax cue.
-    const near = new THREE.GridHelper(2600, 60, 0x2ad0ff, 0x10416e);
-    (near.material as THREE.Material).transparent = true;
-    (near.material as THREE.Material).opacity = 0.5;
-    near.position.y = -260;
-    this.env.add(near);
-
-    const far = new THREE.GridHelper(6000, 40, 0x123a66, 0x0c2746);
-    (far.material as THREE.Material).transparent = true;
-    (far.material as THREE.Material).opacity = 0.28;
-    far.position.y = -262;
-    this.env.add(far);
-
-    // Horizon ring of wireframe boxes → distant skyline. Deterministic heights
-    // (sin hash) so it's stable frame-to-frame and across reloads.
-    const buildings = new THREE.Group();
-    const edgeMat = new THREE.LineBasicMaterial({
+    this.buildingMat = new THREE.LineBasicMaterial({
       color: 0x2ad0ff,
       transparent: true,
       opacity: 0.45,
     });
+    this.buildings = this.buildSkyline(this.buildingMat);
+    this.env.add(this.buildings);
+
+    this.starMat = new THREE.PointsMaterial({
+      color: 0x9ec3ff,
+      size: 3,
+      transparent: true,
+      opacity: 0.55,
+    });
+    this.stars = this.buildStars(this.starMat);
+    this.env.add(this.stars);
+
+    this.scene.add(this.env);
+
+    this.resize();
+    this.applyTier(this.tier);
+
+    if (!this.software) {
+      this.governor = new FpsGovernor(
+        () => TIERS[this.tier].dprCap,
+        (t) => {
+          if (this.qualitySetting === 'auto' && t !== this.tier) this.applyTier(t);
+        },
+      );
+    }
+  }
+
+  /** Horizon ring of wireframe boxes → distant skyline. Deterministic heights
+   *  (sin hash) so it's stable frame-to-frame and across reloads. */
+  private buildSkyline(edgeMat: THREE.LineBasicMaterial): THREE.Group {
+    const buildings = new THREE.Group();
     const RING = 40;
     for (let i = 0; i < RING; i++) {
       const a = (i / RING) * Math.PI * 2;
-      const r = 760 + ((Math.sin(i * 53.13) * 0.5 + 0.5) * 220);
+      const r = 760 + (Math.sin(i * 53.13) * 0.5 + 0.5) * 220;
       const hgt = 120 + (Math.sin(i * 12.9898) * 0.5 + 0.5) * 520;
       const wdt = 60 + (Math.sin(i * 78.233) * 0.5 + 0.5) * 90;
       const box = new THREE.LineSegments(
         new THREE.EdgesGeometry(new THREE.BoxGeometry(wdt, hgt, wdt)),
         edgeMat,
       );
-      box.position.set(Math.cos(a) * r, -260 + hgt / 2, Math.sin(a) * r);
+      box.position.set(Math.cos(a) * r, FLOOR_Y + hgt / 2, Math.sin(a) * r);
       buildings.add(box);
     }
-    this.env.add(buildings);
-  }
-
-  /**
-   * Procedural galaxy skydome: a starfield + nebula panorama painted to an
-   * offscreen canvas (deterministic, so it's stable across reloads) and wrapped
-   * onto a large inward-facing sphere. Sits in the env group, so it parallaxes
-   * and recedes with the dolly exactly like the old wireframe did.
-   */
-  private buildGalaxy(): THREE.Mesh {
-    const W = 2048;
-    const H = 1024;
-    const cvs = document.createElement('canvas');
-    cvs.width = W;
-    cvs.height = H;
-    const g = cvs.getContext('2d')!;
-    let seed = 0x9e3779b9;
-    const rand = () => {
-      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-      return seed / 0x7fffffff;
-    };
-
-    // Deep-space base gradient.
-    const bg = g.createLinearGradient(0, 0, 0, H);
-    bg.addColorStop(0, '#05030f');
-    bg.addColorStop(0.5, '#080718');
-    bg.addColorStop(1, '#03030a');
-    g.fillStyle = bg;
-    g.fillRect(0, 0, W, H);
-
-    // Nebula clouds — soft additive radial gradients in mixed hues.
-    g.globalCompositeOperation = 'lighter';
-    const hues = ['#3a1d6e', '#1d3a6e', '#6e1d52', '#1d6e63', '#402080', '#23507a'];
-    for (let i = 0; i < 26; i++) {
-      const x = rand() * W;
-      const y = H * 0.15 + rand() * H * 0.7;
-      const r = 120 + rand() * 380;
-      const rg = g.createRadialGradient(x, y, 0, x, y, r);
-      rg.addColorStop(0, hues[Math.floor(rand() * hues.length)]);
-      rg.addColorStop(1, 'rgba(0,0,0,0)');
-      g.globalAlpha = 0.1 + rand() * 0.18;
-      g.fillStyle = rg;
-      g.beginPath();
-      g.arc(x, y, r, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.globalAlpha = 1;
-
-    // Stars — mostly white, a few warm/cool tints, varied brightness & size.
-    for (let i = 0; i < 1500; i++) {
-      const x = rand() * W;
-      const y = rand() * H;
-      const s = rand();
-      const size = s > 0.975 ? 1.9 : s > 0.85 ? 1.1 : 0.6;
-      const b = (0.5 + rand() * 0.5).toFixed(2);
-      const tint = rand();
-      g.fillStyle =
-        tint > 0.92 ? `rgba(175,205,255,${b})` : tint < 0.08 ? `rgba(255,212,180,${b})` : `rgba(255,255,255,${b})`;
-      g.beginPath();
-      g.arc(x, y, size, 0, Math.PI * 2);
-      g.fill();
-    }
-    g.globalCompositeOperation = 'source-over';
-
-    const tex = new THREE.CanvasTexture(cvs);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const geo = new THREE.SphereGeometry(1000, 60, 40);
-    return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide }));
+    return buildings;
   }
 
   /** 3D stars on a spherical shell so they parallax with the environment. */
-  private buildStars(): THREE.Points {
+  private buildStars(mat: THREE.PointsMaterial): THREE.Points {
     const COUNT = 360;
     const positions = new Float32Array(COUNT * 3);
     for (let i = 0; i < COUNT; i++) {
-      // Deterministic spherical distribution (golden-angle), upper hemisphere.
       const t = i / COUNT;
       const phi = Math.acos(1 - 1.4 * t); // bias toward the dome top
       const theta = i * 2.39996; // golden angle
@@ -240,30 +189,115 @@ export class DesktopScene {
     }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    return new THREE.Points(
-      geo,
-      new THREE.PointsMaterial({ color: 0x9ec3ff, size: 3, transparent: true, opacity: 0.55 }),
-    );
+    return new THREE.Points(geo, mat);
   }
 
-  /**
-   * Feed the cube's current Y-rotation (deg). The environment eases toward
-   * `PARALLAX × angle`, so switching faces drifts the world for parallax.
-   */
+  /** Tear down tier-scoped modules and rebuild for the requested tier. */
+  private applyTier(tier: Tier): void {
+    const cfg = TIERS[this.software ? 'low' : tier];
+    this.tier = this.software ? 'low' : tier;
+
+    // -- dispose the tier-scoped modules --
+    if (this.canvasSky) {
+      this.env.remove(this.canvasSky);
+      this.canvasSky.geometry.dispose();
+      const m = this.canvasSky.material as THREE.MeshBasicMaterial;
+      m.map?.dispose();
+      m.dispose();
+      this.canvasSky = undefined;
+    }
+    if (this.shaderSky) {
+      this.env.remove(this.shaderSky.mesh);
+      this.shaderSky.dispose();
+      this.shaderSky = undefined;
+    }
+    if (this.dust) {
+      this.env.remove(this.dust.points);
+      this.dust.dispose();
+      this.dust = undefined;
+    }
+    if (this.shooting) {
+      this.env.remove(this.shooting.group);
+      this.shooting.dispose();
+      this.shooting = undefined;
+    }
+    if (this.aurora) {
+      this.env.remove(this.aurora.group);
+      this.aurora.dispose();
+      this.aurora = undefined;
+    }
+    if (this.sun) {
+      this.env.remove(this.sun.mesh);
+      this.sun.dispose();
+      this.sun = undefined;
+    }
+    this.post?.composer.dispose();
+    this.post = undefined;
+    this.composer = undefined;
+
+    // -- build for the new tier --
+    if (cfg.shaderSky) {
+      this.shaderSky = new ShaderSky();
+      this.env.add(this.shaderSky.mesh);
+    } else {
+      this.canvasSky = buildCanvasGalaxy(this.palette);
+      this.env.add(this.canvasSky);
+    }
+    this.dust = new DustParticles(cfg.dustCount);
+    this.env.add(this.dust.points);
+    if (cfg.shootingStars) {
+      this.shooting = new ShootingStars();
+      this.env.add(this.shooting.group);
+    }
+    if (cfg.setPieces) {
+      this.aurora = new AuroraRibbons();
+      this.env.add(this.aurora.group);
+      this.sun = new SynthSun();
+      this.env.add(this.sun.mesh);
+    }
+    if (cfg.composer !== 'none') {
+      try {
+        const dpr = Math.min(devicePixelRatio, cfg.dprCap);
+        this.post = buildPost(
+          this.renderer,
+          this.scene,
+          this.camera,
+          cfg.composer,
+          dpr,
+          this.palette.flags.has('soft'),
+        );
+        this.composer = this.post.composer;
+      } catch (e) {
+        console.warn('Bloom unavailable — rendering without post-processing.', e);
+        this.post = undefined;
+        this.composer = undefined;
+      }
+    }
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, cfg.dprCap));
+    this.resize();
+  }
+
+  // ------------------------------------------------------------------ API
+
+  /** Feed the cube's current Y-rotation (deg); the world eases toward
+   *  PARALLAX × angle so switching faces drifts the environment. */
   setCubeRotation(deg: number): void {
     this.targetRot = THREE.MathUtils.degToRad(deg) * PARALLAX;
   }
 
-  /**
-   * Pull the camera back and ease it home over `durationMs`, peaking at the
-   * midpoint — call this when a cube spin starts so the WebGL world recedes in
-   * lockstep with the CSS cube's pull-back. A timed sin(pi*t) bump guarantees
-   * "peak at mid-spin, zero at rest" and self-cancels (no onfinish hook needed).
-   */
+  /** Camera recession synced to a cube spin: a timed sin(πt) bump that peaks
+   *  at mid-spin and self-cancels. Also pulses the chromatic aberration. */
   pulseDolly(durationMs: number, depth: number): void {
     this.dollyStart = performance.now();
-    this.dollyDur = durationMs;
+    this.dollyDur = Math.max(1, durationMs);
     this.dollyDepth = depth;
+    this.pulseAberration(durationMs);
+  }
+
+  /** RGB-split surge over `durationMs` (same self-cancelling envelope). */
+  pulseAberration(durationMs: number): void {
+    this.aberrStart = performance.now();
+    this.aberrDur = Math.max(1, durationMs);
   }
 
   /** Persistent camera pull-back (px), eased — held while in Expo, 0 in cube. */
@@ -271,26 +305,130 @@ export class DesktopScene {
     this.baseZoom = z;
   }
 
+  /** Head-coupled parallax: the viewer's head pose (-1..1 per axis) offsets
+   *  the camera — move your head and the galaxy shifts behind the desktop
+   *  like a window; lean in and the world draws closer. */
+  setHeadOffset(x: number, y: number, depth: number): void {
+    this.headTX = x * 70;
+    this.headTY = y * 42;
+    this.headTZ = depth * 110;
+  }
+
+  /** New theme palette — every module lerps toward it (a ~1 s world morph).
+   *  The canvas-galaxy tiers repaint their texture once per switch. */
+  setPalette(input: ScenePaletteInput): void {
+    this.palette = toColors(input);
+    if (this.canvasSky) {
+      this.env.remove(this.canvasSky);
+      this.canvasSky.geometry.dispose();
+      const m = this.canvasSky.material as THREE.MeshBasicMaterial;
+      m.map?.dispose();
+      m.dispose();
+      this.canvasSky = buildCanvasGalaxy(this.palette);
+      this.env.add(this.canvasSky);
+    }
+    // Bloom softness is per-theme; rebuild post if the soft flag flipped.
+    if (this.post) {
+      const soft = this.palette.flags.has('soft');
+      this.post.bloom.strength = soft ? 0.6 : 1.35;
+    }
+  }
+
+  /** Quality override from settings: 'auto' lets the fps governor pick. */
+  setQuality(q: 'auto' | Tier): void {
+    this.qualitySetting = q;
+    if (this.software) return; // pinned LOW
+    if (q !== 'auto' && q !== this.tier) this.applyTier(q);
+  }
+
+  /** Up to four window lights (normalized screen coords) projected onto the
+   *  floor grid — the focused windows literally light the world. */
+  setWindowLights(lights: Array<{ nx: number; ny: number; intensity: number; color: string }>): void {
+    const mapped: FloorLight[] = lights.slice(0, MAX_LIGHTS).map((l) => ({
+      x: (l.nx - 0.5) * 1600,
+      z: -(260 + (1 - l.ny) * 700),
+      intensity: l.intensity,
+      color: new THREE.Color(l.color),
+    }));
+    this.floor.setLights(mapped);
+  }
+
+  /** Current tier (for diagnostics / the Control Center readout). */
+  quality(): Tier {
+    return this.tier;
+  }
+
+  // ----------------------------------------------------------------- loop
+
   start(): void {
     if (this.running) return;
     this.running = true;
+    this.lastNow = performance.now();
     const loop = () => {
       if (!this.running) return;
+      const now = performance.now();
+      const dt = Math.min(0.1, (now - this.lastNow) / 1000);
+      this.lastNow = now;
+      const frozen = reducedMotion();
+      if (!frozen) this.time += dt;
+
       // Ease the world toward the parallax target (decoupled from the WAAPI
       // cube spin, so it stays smooth and never fights it).
       this.curRot += (this.targetRot - this.curRot) * 0.06;
       this.env.rotation.y = this.curRot;
-      this.stars.rotation.y += 0.0003; // gentle ambient drift
+      if (!frozen) this.stars.rotation.y += 0.0003; // gentle ambient drift
+
       // Camera Z = eased persistent base (Expo pull-back) + the spin's sin bump.
       // Position-only → no projection-matrix update; the clip-space sky is fixed.
       let bump = 0;
       if (this.dollyStart >= 0) {
-        const t = (performance.now() - this.dollyStart) / this.dollyDur;
+        const t = (now - this.dollyStart) / this.dollyDur;
         if (t >= 1) this.dollyStart = -1;
         else bump = this.dollyDepth * Math.sin(Math.PI * t);
       }
       this.baseZ += (this.baseZoom - this.baseZ) * 0.08;
-      this.camera.position.z = this.baseZ + bump;
+      // Head-coupled parallax: ease the camera toward the viewer's head pose.
+      this.headX += (this.headTX - this.headX) * 0.08;
+      this.headY += (this.headTY - this.headY) * 0.08;
+      this.headZ += (this.headTZ - this.headZ) * 0.08;
+      this.camera.position.x = this.headX;
+      this.camera.position.y = this.headY;
+      this.camera.position.z = this.baseZ + bump - this.headZ;
+
+      // Module updates: palette lerps + time uniforms.
+      const p = this.palette;
+      const stretch = this.dollyDepth > 0 ? bump / this.dollyDepth : 0;
+      this.gradientMat.uniforms['uTop'].value.lerp(p.skyTop, PALETTE_LERP);
+      this.gradientMat.uniforms['uBot'].value.lerp(p.skyBot, PALETTE_LERP);
+      this.buildingMat.color.lerp(p.building, PALETTE_LERP);
+      this.starMat.color.lerp(p.star, PALETTE_LERP);
+      this.floor.update(p, PALETTE_LERP);
+      this.shaderSky?.update(this.time, p, PALETTE_LERP);
+      this.dust?.update(this.time, stretch, p, PALETTE_LERP);
+      this.shooting?.update(this.time, frozen ? 0 : dt, p, frozen);
+      this.aurora?.update(this.time, p, PALETTE_LERP);
+      this.sun?.update(p, PALETTE_LERP);
+
+      // Grade pass: aberration rests at a faint fringe, surges during spins.
+      if (this.post?.grade) {
+        let ca = 0.0008;
+        if (this.aberrStart >= 0) {
+          const t = (now - this.aberrStart) / this.aberrDur;
+          if (t >= 1) this.aberrStart = -1;
+          else ca += 0.0052 * Math.sin(Math.PI * t);
+        }
+        this.post.grade.uniforms['uCA'].value = ca;
+        this.post.grade.uniforms['uTime'].value = this.time;
+      }
+
+      // Adaptive DPR (hardware GL only).
+      const newDpr = this.governor?.tick(now);
+      if (newDpr) {
+        this.renderer.setPixelRatio(newDpr);
+        this.composer?.setPixelRatio(newDpr);
+        this.resize();
+      }
+
       if (this.composer) this.composer.render();
       else this.renderer.render(this.scene, this.camera);
       this.raf = requestAnimationFrame(loop);
@@ -328,7 +466,7 @@ export class DesktopScene {
       if (Array.isArray(mat)) mat.forEach((m) => m.dispose());
       else mat?.dispose?.();
     });
-    this.composer?.dispose();
+    this.post?.composer.dispose();
     this.renderer.dispose();
   }
 }

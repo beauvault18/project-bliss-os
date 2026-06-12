@@ -1,74 +1,75 @@
-# Project Bliss OS — UI Roadmap
+# Bliss OS — UI roadmap
 
-Build order is **one visual feature at a time**, `npm run verify` after each,
-git commit after every success. Do **not** rebuild the working architecture.
+Build order is **one feature at a time**, `npm run verify` after each.
 
-## ✅ v1 — Foundation (done)
-WebGL desktop (orthographic r3f Canvas) · Bliss wallpaper w/ parallax · wobbly
-draggable windows (live `<Html>` + react-spring/use-gesture) · magnetic snapping ·
-Luna taskbar + clock · Start menu · React apps (Notepad, Minesweeper) + Angular
-apps (Calculator, File Explorer, zoneless/JIT).
+## ✅ v1 — "Compiz core" (done)
 
-## ✅ v2 Phase A — Demo feel (done)
-- F11 / Esc **native full-screen** demo mode (IPC bridge).
-- **Desktop icons** with hover-glow + click-bounce that **launch-or-focus** (no duplicates).
-- Stub apps so every icon opens something: Settings, Bliss Lab, AI Coder.
+- 4-face workspace **CSS-3D cube** over a WebGL galaxy, parallax + camera dolly
+- **Wobbly windows** (velocity→skew + underdamped snap-back spring), edge-flip
+  drag-to-spin, 3D Z-pop during rotation
+- **Genie** minimize/restore, **fire** close, window-open map animation
+- Expo 2×2 overview, maximize/tear-loose/resize, glass Tube panel + Applications
+  menu, Conky telemetry, UnrealBloom (hardware-GL gated)
+- Headless smoke harness (`npm run verify`)
 
-## ✅ v2 Phase B — Window controls + lifecycle (done)
-- Single **✦ Rapid Control** button replaces `_ ▢ ✕`.
-- Animated portal menu: **Dock Left / Right**, **Fullscreen**, **Minimize**, **Close Window**, **Quit App**, **Transparency** slider.
-- **Close vs Quit**: closing keeps the app *running* (glowing taskbar dot); quitting clears it.
+## ✅ v2 — "Holographic Emerald" (done — this release)
 
-## ✅ Phase C — Genie minimize / restore (done)
-Window collapses toward its taskbar button on minimize and expands back on
-restore. State machine commits `minimized` only on `onRest`. Modular preset
-registry (`animationPresets.ts`).
+**Foundations**
+- Shared IPC module (`electron/ipc/`) registered by both the app and the smoke
+  harness (handlers can never drift); dead React-era deps removed; the desktop
+  monolith decomposed into `CubeProjector` / `DragController` / `EffectsPlayer`
+  / `GenieManager` / `ConkyComponent` / `installBlissApi`.
 
-## ✅ Phase D — Bliss Lab controls (done)
-Real live control panel ([BlissLabApp.tsx](../src/apps/react/BlissLabApp.tsx)) +
-persisted `preferencesStore`. Wired live: minimize/restore preset, wobble
-strength/speed, snap strength, default opacity, glass mode, **window control side
-(moves the ✦ button)**, animation speed, dramatic mode, demo toggles (show icons /
-taskbar dots / animation labels), Reset Demo Layout, Reset All Settings.
+**Design system**
+- Design tokens ([src/styles/tokens.css](../src/styles/tokens.css)) across the
+  entire shell chrome; **five themes** — Bliss Classic, Cyber Night, Synthwave
+  Sunset, Hologram White, Matrix — switching morphs the WebGL sky over ~1 s.
+- Vendored type system: Orbitron (display) / Rajdhani (UI) / Inter (body) /
+  JetBrains Mono (terminal/telemetry).
 
-## ✅ Phase E1 — Fire Close / Fire Quit (done)
-Close/quit burn-down animations as modular close presets
-([closeEffects.ts](../src/effects/closeEffects.ts),
-[FireCloseOverlay.tsx](../src/effects/FireCloseOverlay.tsx)).
-**Ember Close** (soft, blue/orange) keeps the app running; **Fire Quit**
-(dramatic char/darken) clears the running indicator. Finalization is timer-driven
-so the window leaves exactly when the burn ends; respects animation speed +
-dramatic mode; toggleable via the Bliss Lab "Fire close effects" switch.
+**Scene 2.0** ([src/three/](../src/three/))
+- Shader nebula skydome (FBM + domain warp, twinkling hash-grid stars), shader
+  floor grid with horizon fog + **window-light pooling** (focused windows light
+  the world), GPU dust with **warp streaks during spins**, shooting stars,
+  aurora ribbons, synthwave sun, Matrix digital rain.
+- Post pipeline: bloom + grade pass (**chromatic aberration surging at
+  mid-spin**, film grain, vignette).
+- Quality tiers LOW/MED/HIGH/ULTRA with fps auto-detection + adaptive DPR;
+  SwiftShader stays pinned to the original no-composer contract.
 
-## ✅ Phase E2 — Somersault token minimize (done)
-`somersault-token` minimize preset (selectable in Bliss Lab): the window flips a
-full forward somersault and shrinks onto the desktop as a **live process token**
-([DesktopProcessTokens.tsx](../src/shell/DesktopProcessTokens.tsx),
-[somersaultEffects.ts](../src/effects/somersaultEffects.ts)). Double-click the
-token to restore. Tokens are derived from window state (`minimized && tokenPos`)
-so they can't desync; quitting removes both window and token.
+**Window-manager parity** (incl. the old Phase G)
+- **Ctrl+Tab cinematic coverflow switcher** (MRU; cross-face commits ride the
+  cube spin), **magnetic snap zones** (halves/quarters/maximize) with
+  holographic previews, right-click **context menus**, **Ctrl+K command
+  palette** with fuzzy search, always-on-top, aero-shake, taskbar peek,
+  Expo cross-face window drag.
 
-## ✅ Phase F — Living Parallax Desktop (done)
-Futuristic floating background: a WebGL drifting starfield
-([ParticleField.tsx](../src/scene/ParticleField.tsx)) plus DOM depth layers —
-digital horizon, perspective grid, mist, and a Hacker Mode (scanlines + glow)
-([LivingParallaxDesktop.tsx](../src/scene/LivingParallaxDesktop.tsx)). A single
-rAF loop smooths the pointer into shared CSS variables so every layer (and the
-icons) parallaxes with no per-frame React render. Bliss Lab controls: parallax
-on/off, strength, particle density, particle speed, Hacker Mode. Respects
-prefers-reduced-motion; pauses particles when the window is hidden.
+**Real apps**
+- Terminal → interactive sandboxed interpreter (`help/ls/cat/open/theme/ai/…`)
+- File Explorer → real read-only home browsing; opens files into Notepad
+- Notepad → real open/save through consent-gated native dialogs
+- Market Analytics + Diagnostics → live Binance feed with LIVE/SIM badges and
+  a deterministic offline fallback
+- Media Engine → real looping video + WebAudio spectrum visualizer
+- BlissWave Synth → 16-step WebAudio sequencer
+- **Bliss AI** → streaming Claude assistant (safeStorage key custody,
+  main-process SSE, `BLISS_AI_MOCK=1` for CI)
 
-## ⏭️ Phase G — Cinematic Alt-Tab / Mission Control (next)
-All windows fan out in a 3D-feeling grid for quick switching.
+**Shell**
+- Session persistence (layout + settings survive restarts), Control Center
+  (themes/quality/motion/sound/AI), **synthesized UI sound design** (zero
+  assets), notification toasts, cinematic **boot sequence**, **Ctrl+L lock
+  screen**, motion-scale + reduced-motion support.
 
-## Later
-Phase H workspace cube · Phase I edge-flip/workspace move · Phase J AI Coder mock ·
-maximize rubber-band physics · real Settings app · webcam face-tracking.
+## ⏭️ v3 candidates
 
-## Explicitly later (product/backend, not prototype)
-AI agents, real app mounting, Wayland/compositor, filesystem indexing, face
-tracking, app-to-app negotiation.
+- Window-content thumbnails in the switcher/Expo (app-provided snapshots)
+- AI tool-use: let Bliss AI drive `__bliss` ("move my terminal to workspace 3")
+- Wallpaper packs: user imagery blended into the shader sky
+- Multi-monitor: per-display workspaces, cross-display edge-flip
+- Per-app audio routing + mixer; tiling auto-layouts per face
 
-## Seams already in place
-`windowStore.running` (lifecycle) · `AppDef.showOnDesktop` · stub apps · the
-`__bliss` debug hook · centralized geometry in `windowStore` (mirror for new docks).
+## Explicitly never (see [ipc-contract.md](ipc-contract.md))
+
+Real shell exec/PTY · generic fetch proxy · fs writes outside dialog consent ·
+webview/browser app · Wayland/real compositor.

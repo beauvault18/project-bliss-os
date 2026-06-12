@@ -9,8 +9,9 @@ export interface CubeSpin {
   to: number;
 }
 
-/** Desktop projection: the rotating cube, or the 2x2 Expo overview grid. */
-export type DesktopMode = 'CUBE' | 'EXPO';
+/** Desktop projection: the flat cube, the 2x2 Expo overview grid, or
+ *  Free-Look — the held, steerable floating cube (Compiz Ctrl+Alt+drag). */
+export type DesktopMode = 'CUBE' | 'EXPO' | 'FREE';
 
 /**
  * The virtual-desktop manager. `active` is the source of truth for which
@@ -24,10 +25,19 @@ export class WorkspaceStore {
   /** Cube vs Expo overview. Flipping this re-projects the faces (no remount). */
   readonly mode = signal<DesktopMode>('CUBE');
 
-  /** Enter/leave the Expo overview (ignored mid-spin). */
+  /** Enter/leave the Expo overview (ignored mid-spin / in Free-Look). */
   toggleExpo(): void {
-    if (this.spin()) return;
+    if (this.spin() || this.mode() === 'FREE') return;
     this.mode.update((m) => (m === 'CUBE' ? 'EXPO' : 'CUBE'));
+  }
+
+  /** Free-Look toggle request — a counter, not the mode itself: the desktop
+   *  owns the eased enter/exit animations and flips `mode` when they land.
+   *  Callable from the taskbar, the keyboard, and the __bliss test API. */
+  readonly freeLookReq = signal(0);
+  requestFreeLook(): void {
+    if (this.spin() || this.mode() === 'EXPO') return;
+    this.freeLookReq.update((n) => n + 1);
   }
 
   /** Pick a workspace from Expo and fold back to the cube (no spin). */

@@ -1,0 +1,315 @@
+/* =========================================================================
+   Project Bliss OS — design tokens & themes
+   =========================================================================
+   Every shell-chrome color, glow, glass recipe, and font in styles.css reads
+   from these custom properties. The :root defaults ARE the classic Bliss look
+   (byte-identical to the previously hardcoded values), so the default render
+   is unchanged; switching themes is one attribute write:
+       document.documentElement.dataset.theme = 'synthwave'
+   The --scene-* group is the bridge to the WebGL world: ThemeService parses
+   it via getComputedStyle into a palette signal that DesktopScene lerps its
+   shader uniforms toward — a theme switch morphs the whole galaxy.
+   ========================================================================= */
+
+/* ------------------------------ Fonts ----------------------------------- */
+/* Vendored latin subsets (~100 KB total), bundled by Vite → same-origin under
+   the existing CSP (font-src falls under default-src 'self'). Orbitron and
+   Inter ship as variable fonts (one file spans the weight range). */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 500 900;
+  font-display: swap;
+  src: url('../assets/fonts/Orbitron-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../assets/fonts/Rajdhani-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../assets/fonts/Rajdhani-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../assets/fonts/Inter-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../assets/fonts/JetBrainsMono-400.woff2') format('woff2');
+}
+
+/* --------------------------- Token defaults ------------------------------ */
+/* Bliss Classic — the canonical look. [data-theme='bliss'] is an alias of
+   :root so the theme attribute can always be set explicitly. */
+:root,
+:root[data-theme='bliss'] {
+  /* Type system */
+  --font-display: 'Orbitron', 'Rajdhani', Tahoma, sans-serif; /* OS identity: Conky clock, hero moments */
+  --font-ui: 'Rajdhani', Tahoma, 'Segoe UI', sans-serif;      /* chrome: titlebars, taskbar, menus */
+  --font-body: 'Inter', Tahoma, 'Segoe UI', sans-serif;       /* app body text */
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;       /* terminal, telemetry */
+
+  /* Identity accents */
+  --accent: #00c8ff;
+  --accent-2: #5fb0ff;
+  --accent-rgb: 0, 200, 255;
+
+  /* Glass system (taskbar / menus / popovers) */
+  --glass-bg: rgba(8, 10, 16, 0.45);
+  --glass-menu-bg: rgba(10, 12, 20, 0.92);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-blur: 12px;
+
+  /* Emerald window chrome — glossy two-tone titlebar with the hard 50% break */
+  --titlebar-g1: rgba(255, 255, 255, 0.38);
+  --titlebar-g2: rgba(180, 195, 220, 0.16);
+  --titlebar-g3: rgba(12, 16, 26, 0.55);
+  --titlebar-g4: rgba(6, 9, 16, 0.72);
+  --titlebar-blur-g1: rgba(200, 205, 215, 0.2);
+  --titlebar-blur-g2: rgba(150, 160, 180, 0.1);
+  --titlebar-blur-g3: rgba(20, 24, 32, 0.45);
+  --titlebar-blur-g4: rgba(14, 18, 26, 0.6);
+  --titlebar-text: #fff;
+  --win-border: rgba(0, 0, 0, 0.55);
+  --win-bg: #ece9d8;
+  --win-body-bg: #fff;
+
+  /* Glow system — CSS box-shadow only (the compositor wall: real bloom lives
+     in WebGL; window "glow" must stay razor-sharp DOM shadow). */
+  --glow-focus:
+    0 26px 64px rgba(0, 0, 0, 0.72),
+    0 0 0 1px rgba(120, 200, 255, 0.45),
+    0 0 36px rgba(60, 175, 255, 0.42),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  --shadow-rest: 0 10px 26px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  --glow-soft: 0 0 8px rgba(120, 180, 255, 0.7);
+
+  /* Text */
+  --text-1: #e8eef6;
+  --text-2: #cfe0ff;
+  --text-inverse: #06203f;
+
+  /* Status */
+  --ok: #5dff8d;
+  --ok-glow: rgba(93, 255, 141, 0.85);
+  --danger: #d8401a;
+
+  /* Cyber glass windows + the see-through spin cube */
+  --cyber-border: rgba(120, 180, 255, 0.3);
+  --cube-glass-fill: rgba(18, 36, 68, 0.16);
+  --cube-glass-edge: rgba(130, 200, 255, 0.4);
+  --cube-glass-wash: rgba(60, 140, 255, 0.13);
+
+  /* Workspace pips */
+  --pip-active-g1: #9fd0ff;
+  --pip-active-g2: #5fa0ff;
+
+  /* ---- Scene bridge (read by ThemeService → DesktopScene uniforms) ---- */
+  --scene-sky-top: #0a1a4d;
+  --scene-sky-bot: #03081f;
+  --scene-grid: #2ad0ff;
+  --scene-grid-dim: #10416e;
+  --scene-building: #2ad0ff;
+  --scene-star: #9ec3ff;
+  --scene-nebula-a: #3a1d6e;
+  --scene-nebula-b: #1d3a6e;
+  --scene-nebula-c: #6e1d52;
+  /* Space-separated feature flags parsed by the scene: aurora | sun |
+     shootingstars | digitalrain | scanlines | soft */
+  --scene-flags: 'aurora';
+}
+
+/* ------------------------------ Cyber Night ------------------------------ */
+:root[data-theme='cyber'] {
+  --accent: #00f0ff;
+  --accent-2: #ff2bd6;
+  --accent-rgb: 0, 240, 255;
+  --glass-bg: rgba(2, 8, 16, 0.55);
+  --glass-menu-bg: rgba(2, 10, 18, 0.92);
+  --glass-border: rgba(0, 240, 255, 0.18);
+  --titlebar-g1: rgba(120, 240, 255, 0.32);
+  --titlebar-g2: rgba(40, 130, 160, 0.14);
+  --titlebar-g3: rgba(4, 18, 28, 0.6);
+  --titlebar-g4: rgba(1, 8, 14, 0.78);
+  --win-border: rgba(0, 60, 80, 0.7);
+  --win-bg: #0b1220;
+  --win-body-bg: #0d1626;
+  --glow-focus:
+    0 26px 64px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(0, 240, 255, 0.5),
+    0 0 36px rgba(0, 240, 255, 0.5),
+    inset 0 0 0 1px rgba(180, 250, 255, 0.35);
+  --glow-soft: 0 0 8px rgba(0, 240, 255, 0.7);
+  --text-1: #d7faff;
+  --text-2: #9be8f5;
+  --text-inverse: #021418;
+  --cyber-border: rgba(0, 240, 255, 0.32);
+  --cube-glass-fill: rgba(2, 30, 40, 0.2);
+  --cube-glass-edge: rgba(0, 240, 255, 0.42);
+  --cube-glass-wash: rgba(0, 200, 255, 0.13);
+  --pip-active-g1: #7ef5ff;
+  --pip-active-g2: #00b8d6;
+  --scene-sky-top: #021018;
+  --scene-sky-bot: #000508;
+  --scene-grid: #00f0ff;
+  --scene-grid-dim: #082c3c;
+  --scene-building: #00f0ff;
+  --scene-star: #aef6ff;
+  --scene-nebula-a: #0d4a5e;
+  --scene-nebula-b: #3a0d5e;
+  --scene-nebula-c: #0d2a4a;
+  --scene-flags: 'aurora shootingstars';
+}
+
+/* --------------------------- Synthwave Sunset ---------------------------- */
+:root[data-theme='synthwave'] {
+  --accent: #ff6ec7;
+  --accent-2: #ffb347;
+  --accent-rgb: 255, 110, 199;
+  --glass-bg: rgba(24, 6, 32, 0.5);
+  --glass-menu-bg: rgba(26, 8, 36, 0.92);
+  --glass-border: rgba(255, 110, 199, 0.22);
+  --titlebar-g1: rgba(255, 200, 240, 0.34);
+  --titlebar-g2: rgba(200, 110, 190, 0.15);
+  --titlebar-g3: rgba(40, 8, 48, 0.6);
+  --titlebar-g4: rgba(18, 4, 28, 0.78);
+  --win-border: rgba(60, 10, 60, 0.7);
+  --win-bg: #170b22;
+  --win-body-bg: #1c0f2a;
+  --glow-focus:
+    0 26px 64px rgba(0, 0, 0, 0.78),
+    0 0 0 1px rgba(255, 110, 199, 0.5),
+    0 0 36px rgba(255, 110, 199, 0.48),
+    inset 0 0 0 1px rgba(255, 220, 245, 0.3);
+  --glow-soft: 0 0 8px rgba(255, 110, 199, 0.7);
+  --text-1: #ffe3f4;
+  --text-2: #f8b8de;
+  --text-inverse: #2a0a20;
+  --ok: #ffd166;
+  --ok-glow: rgba(255, 209, 102, 0.85);
+  --cyber-border: rgba(255, 110, 199, 0.32);
+  --cube-glass-fill: rgba(50, 10, 50, 0.2);
+  --cube-glass-edge: rgba(255, 110, 199, 0.42);
+  --cube-glass-wash: rgba(255, 110, 199, 0.12);
+  --pip-active-g1: #ffb8e2;
+  --pip-active-g2: #e05fae;
+  --scene-sky-top: #2b0a3d;
+  --scene-sky-bot: #12041c;
+  --scene-grid: #ff2bd6;
+  --scene-grid-dim: #3d1059;
+  --scene-building: #ff6ec7;
+  --scene-star: #ffd9f0;
+  --scene-nebula-a: #5e0d4a;
+  --scene-nebula-b: #7a3a0d;
+  --scene-nebula-c: #3a0d5e;
+  --scene-flags: 'sun';
+}
+
+/* ---------------------------- Hologram White ----------------------------- */
+/* The light theme — the token-system canary. Flips chrome to frosted white
+   glass over a daylight sky; bloom runs soft so the world reads airy. */
+:root[data-theme='hologram'] {
+  --accent: #4f8cff;
+  --accent-2: #7aa8ff;
+  --accent-rgb: 79, 140, 255;
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-menu-bg: rgba(244, 248, 255, 0.94);
+  --glass-border: rgba(30, 60, 120, 0.18);
+  --titlebar-g1: rgba(255, 255, 255, 0.95);
+  --titlebar-g2: rgba(225, 235, 252, 0.8);
+  --titlebar-g3: rgba(185, 205, 240, 0.75);
+  --titlebar-g4: rgba(160, 185, 230, 0.85);
+  --titlebar-blur-g1: rgba(245, 248, 253, 0.85);
+  --titlebar-blur-g2: rgba(228, 235, 248, 0.7);
+  --titlebar-blur-g3: rgba(205, 218, 242, 0.6);
+  --titlebar-blur-g4: rgba(192, 207, 235, 0.7);
+  --titlebar-text: #16233f;
+  --win-border: rgba(90, 120, 180, 0.5);
+  --win-bg: #f4f8ff;
+  --win-body-bg: #fbfdff;
+  --glow-focus:
+    0 26px 64px rgba(40, 70, 140, 0.35),
+    0 0 0 1px rgba(79, 140, 255, 0.45),
+    0 0 36px rgba(79, 140, 255, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+  --shadow-rest: 0 10px 26px rgba(50, 80, 150, 0.25), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  --glow-soft: 0 0 8px rgba(79, 140, 255, 0.6);
+  --text-1: #16233f;
+  --text-2: #3a5483;
+  --text-inverse: #f4f8ff;
+  --ok: #11b85c;
+  --ok-glow: rgba(17, 184, 92, 0.6);
+  --cyber-border: rgba(79, 140, 255, 0.35);
+  --cube-glass-fill: rgba(235, 243, 255, 0.25);
+  --cube-glass-edge: rgba(79, 140, 255, 0.45);
+  --cube-glass-wash: rgba(140, 180, 255, 0.2);
+  --pip-active-g1: #ffffff;
+  --pip-active-g2: #b9d0ff;
+  --scene-sky-top: #dfe9ff;
+  --scene-sky-bot: #aac4f5;
+  --scene-grid: #7da0e8;
+  --scene-grid-dim: #c3d4f5;
+  --scene-building: #7da0e8;
+  --scene-star: #ffffff;
+  --scene-nebula-a: #b9c9ee;
+  --scene-nebula-b: #d8c9ee;
+  --scene-nebula-c: #c9e2ee;
+  --scene-flags: 'soft';
+}
+
+/* -------------------------------- Matrix --------------------------------- */
+:root[data-theme='matrix'] {
+  --accent: #00ff66;
+  --accent-2: #9dffb0;
+  --accent-rgb: 0, 255, 102;
+  --glass-bg: rgba(1, 12, 5, 0.6);
+  --glass-menu-bg: rgba(1, 14, 6, 0.94);
+  --glass-border: rgba(0, 255, 102, 0.2);
+  --titlebar-g1: rgba(140, 255, 180, 0.3);
+  --titlebar-g2: rgba(40, 140, 80, 0.14);
+  --titlebar-g3: rgba(2, 22, 10, 0.65);
+  --titlebar-g4: rgba(0, 10, 4, 0.8);
+  --win-border: rgba(0, 60, 25, 0.75);
+  --win-bg: #04130a;
+  --win-body-bg: #06180d;
+  --glow-focus:
+    0 26px 64px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(0, 255, 102, 0.45),
+    0 0 36px rgba(0, 255, 102, 0.42),
+    inset 0 0 0 1px rgba(180, 255, 200, 0.3);
+  --glow-soft: 0 0 8px rgba(0, 255, 102, 0.7);
+  --text-1: #b8ffcb;
+  --text-2: #7ce89a;
+  --text-inverse: #02160a;
+  --ok: #00ff66;
+  --ok-glow: rgba(0, 255, 102, 0.85);
+  --cyber-border: rgba(0, 255, 102, 0.3);
+  --cube-glass-fill: rgba(2, 30, 12, 0.22);
+  --cube-glass-edge: rgba(0, 255, 102, 0.4);
+  --cube-glass-wash: rgba(0, 255, 102, 0.1);
+  --pip-active-g1: #8fffb4;
+  --pip-active-g2: #00cc52;
+  --scene-sky-top: #02160a;
+  --scene-sky-bot: #000803;
+  --scene-grid: #00ff66;
+  --scene-grid-dim: #053818;
+  --scene-building: #00ff66;
+  --scene-star: #b8ffcb;
+  --scene-nebula-a: #0d3a1d;
+  --scene-nebula-b: #0d2e16;
+  --scene-nebula-c: #06200f;
+  --scene-flags: 'aurora digitalrain scanlines';
+}

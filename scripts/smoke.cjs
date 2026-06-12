@@ -1,19 +1,28 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 const os = require('node:os');
-// The smoke harness is its own main process — register the same telemetry handler
-// that electron/main.ts provides so the IPC bridge can be exercised end-to-end.
-let prevTimes = os.cpus().map((c) => ({ ...c.times }));
-ipcMain.handle('get-system-stats', () => {
-  const cpus = os.cpus();
-  const cores = cpus.map((c, i) => {
-    const p = prevTimes[i] ?? c.times, t = c.times;
-    const idle = t.idle - p.idle;
-    const total = t.user - p.user + (t.nice - p.nice) + (t.sys - p.sys) + idle + (t.irq - p.irq);
-    return total > 0 ? Math.max(0, Math.min(100, (1 - idle / total) * 100)) : 0;
-  });
-  prevTimes = cpus.map((c) => ({ ...c.times }));
-  return { cores, cpu: cores.reduce((a, b) => a + b, 0) / (cores.length || 1), ramUsed: os.totalmem() - os.freemem(), ramTotal: os.totalmem() };
+// Isolate all persisted state (settings/session files land in userData) so a
+// smoke run never reads or pollutes a real profile — the fresh-profile seed
+// path is itself what the suite asserts on.
+app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'bliss-smoke-')));
+// Point the read-only fs sandbox at a fixture dir so the terminal/explorer
+// tests are deterministic and never touch the real home directory.
+const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'bliss-sb-'));
+fs.writeFileSync(path.join(sandbox, 'hello.txt'), 'greetings from the sandbox\n');
+fs.mkdirSync(path.join(sandbox, 'docs'));
+process.env.BLISS_SANDBOX_ROOT = sandbox;
+// Exercise the full AI streaming pipeline keylessly (canned main-process stream).
+process.env.BLISS_AI_MOCK = '1';
+// Pin market data to the deterministic SIM fallback — the gate test asserts on
+// the SIM ticker's churn, and CI runs must never depend on the network.
+process.env.BLISS_MARKET_OFFLINE = '1';
+// The smoke harness is its own main process — register the SAME built IPC
+// bundle that electron/main.ts uses, so the handlers under test are
+// byte-identical to the handlers that ship (they can never drift).
+let smokeWindow = null;
+require(path.join(__dirname, '..', 'dist-electron', 'ipc.js')).registerAllIpc({
+  getMainWindow: () => smokeWindow,
 });
 // Force software WebGL (SwiftShader) so the Three.js canvas gets a GL context in
 // this headless/sandboxed environment.
@@ -33,6 +42,7 @@ app.whenReady().then(() => {
     // cadence even though this window is never shown (needed for the gate test).
     webPreferences: { preload: path.join(ROOT, 'dist-electron', 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
   });
+  smokeWindow = win;
   win.webContents.on('console-message', (...a) => {
     const ev = a[0];
     const level = (ev && ev.level) ?? a[1];
@@ -117,6 +127,169 @@ app.whenReady().then(() => {
         calcGone: !document.querySelector('[data-appid="calculator"] [data-testid="calc-display"]'),
       })`);
       console.log('CLOSE ' + JSON.stringify({ beforeClose, afterClose }));
+
+      // --- R4: interactive terminal + sandboxed fs --------------------------
+      // Drive the terminal's real command line: help, ls (fixture dir), open,
+      // cat. The fs commands exercise the realpath-sandboxed fs:* channels.
+      const term = await run(`(async () => {
+        const root = document.querySelector('[data-appid="system-terminal"]');
+        const input = root.querySelector('[data-testid="term-input"]');
+        const logs = () => Array.from(root.querySelectorAll('.logs p')).map(p => p.textContent);
+        const type = async (cmd) => {
+          input.value = cmd;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+          await new Promise(r => setTimeout(r, 400));
+        };
+        await type('help');
+        const helpShown = logs().some(t => t.includes('built-in commands'));
+        await type('ls');
+        const lsHasFixture = logs().some(t => t.includes('hello.txt')) && logs().some(t => t.includes('docs/'));
+        await type('cat hello.txt');
+        const catHas = logs().some(t => t.includes('greetings from the sandbox'));
+        await type('cat ../../etc/passwd');
+        const escaped = logs().some(t => t.includes('root:'));
+        await type('open calculator');
+        await new Promise(r => setTimeout(r, 400));
+        const calcOpen = window.__bliss.windows().some(w => w.appId === 'calculator');
+        const w = window.__bliss.windows().find(x => x.appId === 'calculator');
+        if (w) window.__bliss.close(w.id);
+        return { helpShown, lsHasFixture, catHas, escaped, calcOpen };
+      })()`);
+      console.log('TERMINAL ' + JSON.stringify(term));
+
+      // --- R4: Notepad launched on a file via WINDOW_PARAMS ------------------
+      await run(`window.__bliss.open('notepad', { params: { path: 'hello.txt' } })`);
+      await wait(500);
+      const notepad = await run(`(() => {
+        const ta = document.querySelector('[data-appid="notepad"] [data-testid="notepad-text"]');
+        const loaded = !!ta && ta.value.includes('greetings from the sandbox');
+        const w = window.__bliss.windows().find(x => x.appId === 'notepad');
+        if (w) window.__bliss.close(w.id);
+        return { loaded };
+      })()`);
+      console.log('NOTEPAD ' + JSON.stringify(notepad));
+      await wait(300);
+
+      // --- R7: market SIM badge (offline-pinned) + toast lifecycle ----------
+      const market = await run(`(() => {
+        const badge = document.querySelector('[data-appid="market-charts"] [data-testid="market-src"]');
+        return { src: badge ? badge.textContent.trim() : null };
+      })()`);
+      console.log('MARKET ' + JSON.stringify(market));
+      const toast = await run(`(async () => {
+        window.__bliss.notify('🔔', 'Smoke toast', 'lifecycle check');
+        await new Promise(r => setTimeout(r, 250));
+        const shown = !!document.querySelector('[data-testid="toast"]');
+        await new Promise(r => setTimeout(r, 4600));
+        const gone = !document.querySelector('[data-testid="toast"]');
+        return { shown, gone };
+      })()`);
+      console.log('TOAST ' + JSON.stringify(toast));
+
+      // --- R6: Bliss AI — streamed chat over the ai:* bridge (mock mode) ----
+      await run(`window.__bliss.open('bliss-ai', { params: { prompt: 'hello there' } })`);
+      let aiText = '';
+      for (let i = 0; i < 40; i++) {
+        aiText = await run(`(() => {
+          const turns = document.querySelectorAll('[data-appid="bliss-ai"] [data-testid="ai-turn"]');
+          return turns.length ? turns[turns.length - 1].textContent : '';
+        })()`);
+        if (aiText.includes('chunk plumbing is live')) break;
+        await wait(150);
+      }
+      const ai = await run(`(() => {
+        const userTurn = document.querySelector('[data-appid="bliss-ai"] [data-testid="ai-turn"]');
+        const w = window.__bliss.windows().find(x => x.appId === 'bliss-ai');
+        if (w) window.__bliss.close(w.id);
+        return { prompted: !!userTurn && userTurn.textContent.includes('hello there') };
+      })()`);
+      ai.streamed = aiText.includes('Hello from Bliss AI (mock stream). All chunk plumbing is live.');
+      console.log('AI ' + JSON.stringify(ai));
+      await wait(300);
+
+      // --- R6: terminal one-shot ai command rides the same pipeline ---------
+      const termAi = await run(`(async () => {
+        const root = document.querySelector('[data-appid="system-terminal"]');
+        const input = root.querySelector('[data-testid="term-input"]');
+        input.value = 'ai ping';
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 150));
+          const txt = Array.from(root.querySelectorAll('.logs p')).map(p => p.textContent).join('\\n');
+          if (txt.includes('mock stream')) return { answered: true };
+        }
+        return { answered: false };
+      })()`);
+      console.log('TERMAI ' + JSON.stringify(termAi));
+
+      // --- R6: head-tracking parallax (camera-free injection seam) ----------
+      // The camera never opens headless (document.hidden gate); inject a pose
+      // and assert it propagates to the perspective-origin + the CSS vars.
+      const head = await run(`(async () => {
+        window.__bliss.setHead(0.8, -0.5, 0);
+        await new Promise(r => setTimeout(r, 700)); // smoother eases ~10%/frame
+        const vp = document.querySelector('.cube-viewport');
+        const origin = vp.style.perspectiveOrigin || '';
+        const hx = Number(getComputedStyle(document.documentElement).getPropertyValue('--head-x'));
+        window.__bliss.setHead(0, 0, 0);
+        await new Promise(r => setTimeout(r, 700));
+        const hxBack = Number(getComputedStyle(document.documentElement).getPropertyValue('--head-x'));
+        return { shifted: origin.includes('calc') && !origin.includes('50% + 0.00%'), hx, hxBack };
+      })()`);
+      console.log('HEAD ' + JSON.stringify(head));
+
+      // --- R5: cinematic switcher (one step + commit = second-MRU focus) ----
+      const altTab = await run(`(async () => {
+        const before = window.__bliss.windows().slice().sort((a, b) => b.z - a.z).map(w => w.id);
+        window.__bliss.altTab();
+        await new Promise(r => setTimeout(r, 300));
+        const focused = window.__bliss.windows().find(w => w.focused);
+        return { switched: !!focused && focused.id === before[1] };
+      })()`);
+      await settle(); // the commit may ride a cross-face cube spin
+      console.log('ALTTAB ' + JSON.stringify(altTab));
+
+      // --- R6: Cube Free-Look (the held floating cube) -----------------------
+      // Enter, confirm all faces are on display + windows Z-popped, steer one
+      // face to the right, snap out — lands on workspace 1 like the video's
+      // arrow-key flow.
+      await run(`window.__bliss.switchWorkspace(0)`);
+      await settle();
+      await run(`window.__bliss.freeLook()`);
+      await wait(900); // enter ease (rAF engine)
+      const freeOn = await run(`({
+        mode: window.__bliss.mode(),
+        hint: !!document.querySelector('[data-testid="free-hint"]'),
+        facesShown: [...document.querySelectorAll('.cube-viewport--free .cube-face')].length,
+        cubeScaled: (document.querySelector('.cube')?.style.transform || '').includes('scale('),
+      })`);
+      await run(`window.__bliss.freeRotate(-90)`); // ArrowRight: next face
+      await wait(700);
+      await run(`window.__bliss.freeLook()`); // toggle again → snap out
+      for (let i = 0; i < 40 && (await run(`window.__bliss.mode()`)) !== 'CUBE'; i++) await wait(150);
+      await wait(300);
+      const freeOff = await run(`({ mode: window.__bliss.mode(), active: window.__bliss.workspace() })`);
+      console.log('FREELOOK ' + JSON.stringify({ freeOn, freeOff }));
+
+      // --- R5: magnetic snap zones (drag into the left band → left half) ----
+      await run(`window.__bliss.switchWorkspace(0)`);
+      await settle();
+      const snap = await run(`(async () => {
+        const tb = document.querySelector('[data-appid="fractal-engine"] [data-testid="titlebar"]');
+        tb.dispatchEvent(new PointerEvent('pointerdown', { clientX: 300, clientY: 60, bubbles: true }));
+        window.dispatchEvent(new PointerEvent('pointermove', { clientX: 200, clientY: 300, bubbles: true }));
+        window.dispatchEvent(new PointerEvent('pointermove', { clientX: 25, clientY: 300, bubbles: true }));
+        await new Promise(r => setTimeout(r, 120)); // let the preview render (zoneless flush)
+        const preview = !!document.querySelector('.snap-preview');
+        window.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }));
+        await new Promise(r => setTimeout(r, 300)); // snap glide
+        const w = window.__bliss.windows().find(x => x.appId === 'fractal-engine');
+        return { preview, x: w.x, y: w.y, w: w.w, h: w.h,
+                 expW: Math.floor(window.innerWidth / 2), expH: window.innerHeight - 32 };
+      })()`);
+      console.log('SNAP ' + JSON.stringify(snap));
 
       // --- R1b: live-window cube (windows live on rotating faces) -----------
       // 4 faces; at rest the active face is square-on so its windows are full
@@ -223,6 +396,36 @@ app.whenReady().then(() => {
       const tele = await run(`window.electronAPI.getSystemStats().then(s => ({ cores: s.cores.length, cpu: typeof s.cpu, ram: s.ramTotal > 0 }))`);
       console.log('TELEMETRY ' + JSON.stringify(tele));
 
+      // --- Persistence: settings + session round-trip over the bridge ------
+      // (userData is a temp dir, so nothing leaks between runs.)
+      const persist = await run(`(async () => {
+        const api = window.electronAPI;
+        await api.settings.set({ theme: 'cyber', volume: 0.7, bogusKey: 'rejected' });
+        const s = await api.settings.get();
+        const saved = await api.session.save({ version: 1, active: 1, windows: [
+          { appId: 'notepad', title: 'T', x: 1, y: 2, w: 300, h: 200, workspace: 1,
+            minimized: false, maximized: false, prevGeom: null },
+        ] });
+        const loaded = await api.session.load();
+        return { theme: s.theme, vol: s.volume, bogus: 'bogusKey' in s, saved,
+                 loadedCount: loaded.windows.length, loadedActive: loaded.active };
+      })()`);
+      console.log('PERSIST ' + JSON.stringify(persist));
+
+      // --- Theme switching: data-theme attribute + token cascade -----------
+      // (effects flush in a microtask under zoneless — yield between writes)
+      const themed = await run(`(async () => {
+        const tick = () => new Promise(r => setTimeout(r, 50));
+        window.__bliss.setTheme('matrix');
+        await tick();
+        const attr = document.documentElement.dataset.theme;
+        const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        window.__bliss.setTheme('bliss');
+        await tick();
+        return { attr, accent, back: document.documentElement.dataset.theme };
+      })()`);
+      console.log('THEME ' + JSON.stringify(themed));
+
       // --- Perf: per-window animation gate ---------------------------------
       // Diagnostics is on ws3 (off the active ws1 face) → its loop is gated, so
       // its crypto ticker (mocked random-walk) stays frozen; switching to ws3
@@ -317,6 +520,21 @@ app.whenReady().then(() => {
         afterFire.count === beforeFire - 1 && afterFire.gone === true &&
         gate.frozenOff === true && gate.liveOn === true &&
         tele.cores > 0 && tele.cpu === 'number' && tele.ram === true &&
+        persist.theme === 'cyber' && persist.vol === 0.7 && persist.bogus === false &&
+        persist.saved === true && persist.loadedCount === 1 && persist.loadedActive === 1 &&
+        themed.attr === 'matrix' && themed.accent === '#00ff66' && themed.back === 'bliss' &&
+        head.shifted === true && head.hx > 0.5 && Math.abs(head.hxBack) < 0.1 &&
+        freeOn.mode === 'FREE' && freeOn.hint === true && freeOn.facesShown === 4 &&
+        freeOn.cubeScaled === true &&
+        freeOff.mode === 'CUBE' && freeOff.active === 1 &&
+        term.helpShown === true && term.lsHasFixture === true && term.catHas === true &&
+        term.escaped === false && term.calcOpen === true &&
+        notepad.loaded === true &&
+        market.src === 'SIM' && toast.shown === true && toast.gone === true &&
+        ai.prompted === true && ai.streamed === true && termAi.answered === true &&
+        altTab.switched === true &&
+        snap.preview === true && snap.x === 0 && snap.y === 32 &&
+        snap.w === snap.expW && snap.h === snap.expH &&
         minClose.gone === true && genieAfterMin === genieBefore + 1 &&
         minClose.genieSize === genieBefore &&
         expoOn.mode === 'EXPO' && expoOn.grid === true && expoOn.faces === 4 &&

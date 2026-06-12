@@ -23,6 +23,22 @@ export default defineConfig({
           args.reload();
         },
       },
+      {
+        // Shared IPC handler module — built standalone so the smoke harness
+        // (scripts/smoke.cjs, its own main process) can require() the exact
+        // bundle the app registers. main.ts also imports it (inlined there).
+        entry: 'electron/ipc/index.ts',
+        onstart(args) {
+          args.reload();
+        },
+        vite: {
+          build: {
+            rollupOptions: {
+              output: { entryFileNames: 'ipc.js', exports: 'named' },
+            },
+          },
+        },
+      },
     ]),
   ],
   build: {

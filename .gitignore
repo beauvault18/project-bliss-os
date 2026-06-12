@@ -5,3 +5,8 @@ dist-electron/
 .DS_Store
 # macOS AppleDouble sidecar files (created on non-HFS volumes like the T7 Shield)
 ._*
+
+# Secrets / local env (defensive — AI key is stored via Electron safeStorage, not here)
+.env
+.env.*
+*.local

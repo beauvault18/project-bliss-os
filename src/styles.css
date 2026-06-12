@@ -1,3 +1,5 @@
+@import './styles/tokens.css';
+
 * {
   box-sizing: border-box;
 }
@@ -12,9 +14,9 @@ body,
 }
 
 body {
-  font-family: Tahoma, 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   user-select: none;
-  background: #245edb;
+  background: #245edb; /* boot paint — matches BrowserWindow backgroundColor */
 }
 
 .desktop {
@@ -166,23 +168,19 @@ body {
   /* Emerald-style frame: dark translucent edge + outer drop shadow + a thin
      inner highlight bevel for the glossy 2010s aero look. Background is left to
      each app (XP solid / cyber glass). */
-  border: 1px solid rgba(0, 0, 0, 0.55);
+  border: 1px solid var(--win-border);
   border-radius: 8px 8px 4px 4px;
-  background: #ece9d8;
+  background: var(--win-bg);
   /* Unfocused: sits lower, dimmer (less lift, no halo). */
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  box-shadow: var(--shadow-rest);
   overflow: hidden;
   will-change: transform;
   transition: box-shadow 0.2s ease;
 }
 .window--focused {
-  /* Floating glowing box: a deep lift shadow + an electric-blue neon halo so the
+  /* Floating glowing box: a deep lift shadow + a themed neon halo so the
      focused window reads as a physical object hovering above the desktop. */
-  box-shadow:
-    0 26px 64px rgba(0, 0, 0, 0.72),
-    0 0 0 1px rgba(120, 200, 255, 0.45),
-    0 0 36px rgba(60, 175, 255, 0.42),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  box-shadow: var(--glow-focus);
 }
 
 .titlebar {
@@ -191,17 +189,18 @@ body {
   justify-content: space-between;
   height: 30px;
   padding: 0 10px;
-  color: #fff;
-  font-weight: 700;
+  color: var(--titlebar-text);
+  font-family: var(--font-ui);
+  font-weight: 600;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
   cursor: grab;
   /* Classic Emerald gloss: light top half, hard 50% break, dark bottom half. */
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.38) 0%,
-    rgba(180, 195, 220, 0.16) 49%,
-    rgba(12, 16, 26, 0.55) 50%,
-    rgba(6, 9, 16, 0.72) 100%
+    var(--titlebar-g1) 0%,
+    var(--titlebar-g2) 49%,
+    var(--titlebar-g3) 50%,
+    var(--titlebar-g4) 100%
   );
   border-bottom: 1px solid rgba(0, 0, 0, 0.8);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -213,10 +212,10 @@ body {
 .titlebar--blurred {
   background: linear-gradient(
     to bottom,
-    rgba(200, 205, 215, 0.2) 0%,
-    rgba(150, 160, 180, 0.1) 49%,
-    rgba(20, 24, 32, 0.45) 50%,
-    rgba(14, 18, 26, 0.6) 100%
+    var(--titlebar-blur-g1, rgba(200, 205, 215, 0.2)) 0%,
+    var(--titlebar-blur-g2, rgba(150, 160, 180, 0.1)) 49%,
+    var(--titlebar-blur-g3, rgba(20, 24, 32, 0.45)) 50%,
+    var(--titlebar-blur-g4, rgba(14, 18, 26, 0.6)) 100%
   );
 }
 .titlebar__name {
@@ -254,8 +253,9 @@ body {
 .window__body {
   flex: 1;
   overflow: hidden;
-  background: #fff;
+  background: var(--win-body-bg);
   position: relative;
+  font-family: var(--font-body);
 }
 
 /* ----------------------------- Taskbar ----------------------------------- */
@@ -271,11 +271,11 @@ body {
   gap: 8px;
   padding: 0 10px;
   z-index: 100000;
-  background: rgba(8, 10, 16, 0.45);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  color: #e8eef6;
+  color: var(--text-1);
 }
 
 .menu-btn {
@@ -285,7 +285,7 @@ body {
   height: 24px;
   padding: 0 12px;
   flex: none;
-  color: #fff;
+  color: var(--text-1);
   font-weight: 600;
   font-size: 0.82rem;
   cursor: pointer;
@@ -297,8 +297,8 @@ body {
   background: rgba(255, 255, 255, 0.16);
 }
 .menu-btn__logo {
-  color: #00c8ff;
-  text-shadow: 0 0 6px rgba(0, 200, 255, 0.6);
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(var(--accent-rgb), 0.6);
 }
 
 .task-list {
@@ -320,7 +320,7 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-top: 2px solid transparent;
   border-radius: 4px;
-  color: #dfe6f0;
+  color: var(--text-1);
   font-size: 0.78rem;
   cursor: pointer;
   overflow: hidden;
@@ -331,7 +331,7 @@ body {
 }
 .task--active {
   background: rgba(255, 255, 255, 0.2);
-  border-top: 2px solid #00c8ff; /* focused-window indicator */
+  border-top: 2px solid var(--accent); /* focused-window indicator */
 }
 /* Minimized: dimmed + italic so you can tell it's tucked into the dock. */
 .task--minimized {
@@ -372,7 +372,7 @@ body {
   gap: 8px;
   flex: none;
   margin-left: auto;
-  color: #e8eef6;
+  color: var(--text-1);
   font-size: 0.8rem;
 }
 .task__icon {
@@ -394,9 +394,9 @@ body {
   flex-direction: column;
   min-width: 210px;
   padding: 6px;
-  background: rgba(10, 12, 20, 0.92);
+  background: var(--glass-menu-bg);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--glass-border);
   border-radius: 8px;
   box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
 }
@@ -411,13 +411,13 @@ body {
   border: none;
   border-radius: 5px;
   background: transparent;
-  color: #e8eef6;
+  color: var(--text-1);
   font-size: 0.85rem;
   text-align: left;
   cursor: pointer;
 }
 .apps-menu__item:hover {
-  background: rgba(120, 180, 255, 0.22);
+  background: rgba(var(--accent-rgb), 0.22);
 }
 .apps-menu__icon {
   font-size: 1.1rem;
@@ -589,8 +589,8 @@ body {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #5dff8d;
-  box-shadow: 0 0 8px 2px rgba(93, 255, 141, 0.85);
+  background: var(--ok);
+  box-shadow: 0 0 8px 2px var(--ok-glow);
 }
 .desktop-icon__label {
   font-size: 0.72rem;
@@ -676,12 +676,12 @@ body {
   width: 210px;
   padding: 6px;
   border-radius: 10px;
-  background: rgba(22, 34, 60, 0.92);
+  background: var(--glass-menu-bg);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(120, 170, 255, 0.4);
+  border: 1px solid var(--glass-border);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
-  color: #eaf1ff;
-  font-family: Tahoma, 'Segoe UI', sans-serif;
+  color: var(--text-1);
+  font-family: var(--font-ui);
 }
 .rcm__title {
   font-size: 0.68rem;
@@ -741,8 +741,8 @@ body {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #5dff8d;
-  box-shadow: 0 0 6px 1px rgba(93, 255, 141, 0.85);
+  background: var(--ok);
+  box-shadow: 0 0 6px 1px var(--ok-glow);
   flex: none;
 }
 .task--active .task__dot {
@@ -777,7 +777,7 @@ body {
 .cube-face .window[data-appid='media-streamer'],
 .cube-face .window[data-appid='diagnostics'] {
   background: transparent;
-  border: 1px solid rgba(120, 180, 255, 0.3);
+  border: 1px solid var(--cyber-border);
 }
 .cube-face .window[data-appid='fractal-engine'] .window__body,
 .cube-face .window[data-appid='system-terminal'] .window__body,
@@ -817,20 +817,23 @@ body {
   text-align: right;
   pointer-events: none;
   color: rgba(255, 255, 255, 0.82);
-  font-family: 'Ubuntu', 'Segoe UI', sans-serif;
+  font-family: var(--font-ui);
   text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.85);
 }
 .conky__time {
   margin: 0;
-  font-size: 64px;
-  font-weight: 200;
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 500;
   letter-spacing: 2px;
   line-height: 1;
+  color: var(--text-1);
+  text-shadow: 0 0 18px rgba(var(--accent-rgb), 0.35), 1px 1px 4px rgba(0, 0, 0, 0.85);
 }
 .conky__line {
   margin: 5px 0 0;
   font-size: 13px;
-  font-family: 'Consolas', monospace;
+  font-family: var(--font-mono);
   opacity: 0.8;
 }
 
@@ -1142,8 +1145,8 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.12);
-  color: #eaf1ff;
-  font: 700 0.78rem Tahoma, sans-serif;
+  color: var(--text-1);
+  font: 600 0.78rem var(--font-ui);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1153,10 +1156,10 @@ body {
   background: rgba(255, 255, 255, 0.24);
 }
 .ws-pip--active {
-  background: linear-gradient(#9fd0ff, #5fa0ff);
-  border-color: #cfe6ff;
-  color: #06203f;
-  box-shadow: 0 0 8px rgba(120, 180, 255, 0.7);
+  background: linear-gradient(var(--pip-active-g1), var(--pip-active-g2));
+  border-color: var(--pip-active-g1);
+  color: var(--text-inverse);
+  box-shadow: var(--glow-soft);
 }
 .ws-pip__dot {
   position: absolute;
@@ -1165,7 +1168,7 @@ body {
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: #7CFF9E;
+  background: var(--ok);
 }
 /* A task whose window lives on another workspace. */
 .task--elsewhere {
@@ -1344,7 +1347,7 @@ body {
   border-left: 1px solid #1c50c8;
 }
 .clock {
-  font: 700 0.82rem Tahoma, sans-serif;
+  font: 600 0.82rem var(--font-ui);
   text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.4);
 }
 
@@ -1429,13 +1432,513 @@ body {
      box its structure, and you see the galaxy + popped windows through it as it
      turns. Scoped to the spin → no tint on the flat desktop at rest. (Backfaces
      stay culled — rendering all 8 sides would double the spin's compositing.) */
-  background: rgba(18, 36, 68, 0.16);
+  background: var(--cube-glass-fill);
   box-shadow:
-    inset 0 0 0 1px rgba(130, 200, 255, 0.4),
-    inset 0 0 90px rgba(60, 140, 255, 0.13);
+    inset 0 0 0 1px var(--cube-glass-edge),
+    inset 0 0 90px var(--cube-glass-wash);
 }
 /* backdrop-filter is costly mid-rotation (and pointless while blurring a moving
    3D layer) — drop it during the spin so cube turns stay smooth. */
 .cube-viewport--spin .window * {
   backdrop-filter: none !important;
+}
+
+/* ===================== WM parity chrome (Phase 5) ======================== */
+
+/* Magnetic snap zones: holographic placement preview while dragging. */
+.snap-preview {
+  position: absolute;
+  z-index: 50000;
+  pointer-events: none;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: rgba(var(--accent-rgb), 0.08);
+  backdrop-filter: blur(2px);
+  box-shadow: inset 0 0 24px rgba(var(--accent-rgb), 0.15), 0 0 18px rgba(var(--accent-rgb), 0.25);
+  animation: snap-in 0.12s ease;
+}
+@keyframes snap-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* The snap commit glides on left/top/width/height — a class, never transform,
+   so the wobble skew binding keeps sole ownership of transform. */
+.cube-face .window--snapping {
+  transition: left 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1), top 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1),
+    width 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1), height 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+
+/* Taskbar peek: every other window recedes (opacity/filter only). */
+.cube-face .window--peek-dim {
+  opacity: 0.15;
+  filter: saturate(0.4);
+  transition: opacity 0.18s ease, filter 0.18s ease;
+}
+
+/* Expo drag: a lifted thumbnail glows while being carried between faces. */
+.cube-viewport--expo .cube-face .window .titlebar {
+  pointer-events: auto; /* draggable handle inside Expo */
+  cursor: grab;
+}
+.window--expo-lift {
+  box-shadow: var(--glow-focus) !important;
+  opacity: 0.95;
+}
+
+/* ------------------------- Cinematic switcher --------------------------- */
+.switcher {
+  position: absolute;
+  inset: 0;
+  z-index: 90000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 100% at 50% 45%, rgba(4, 8, 20, 0.35) 0%, rgba(2, 4, 12, 0.78) 100%);
+  animation: ov-fade 0.15s ease;
+}
+.switcher__rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  height: 220px;
+  width: 100%;
+}
+.switcher__card {
+  position: absolute;
+  width: 200px;
+  height: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-menu-bg);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+  color: var(--text-1);
+  cursor: pointer;
+  transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.4, 1.1), filter 0.22s ease, box-shadow 0.22s ease;
+  filter: brightness(0.55) saturate(0.7);
+}
+.switcher__card--sel {
+  border-color: var(--accent);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6), 0 0 36px rgba(var(--accent-rgb), 0.45);
+  filter: none;
+}
+.switcher__icon {
+  font-size: 3rem;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.6));
+}
+.switcher__title {
+  font: 600 0.9rem var(--font-display);
+  letter-spacing: 0.04em;
+  max-width: 88%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.switcher__ws {
+  font: 500 0.7rem var(--font-mono);
+  color: var(--accent);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
+}
+
+/* ------------------------- Command palette ------------------------------ */
+.palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 95000;
+  background: rgba(2, 4, 12, 0.35);
+  animation: ov-fade 0.12s ease;
+}
+.palette {
+  position: fixed;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, 86vw);
+  z-index: 95001;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-menu-bg);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65), 0 0 40px rgba(var(--accent-rgb), 0.12);
+  overflow: hidden;
+  animation: palette-pop 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+@keyframes palette-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1) translateY(0);
+  }
+}
+.palette__input {
+  width: 100%;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  outline: none;
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-1);
+  font: 500 1rem var(--font-ui);
+  padding: 14px 16px;
+  caret-color: var(--accent);
+}
+.palette__input::placeholder {
+  color: var(--text-1);
+  opacity: 0.4;
+}
+.palette__list {
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+}
+.palette__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-1);
+  font: 500 0.88rem var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.palette__item--sel {
+  background: rgba(var(--accent-rgb), 0.22);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.35);
+}
+.palette__glyph {
+  width: 22px;
+  text-align: center;
+  flex: none;
+}
+.palette__label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.palette__hint {
+  font: 500 0.7rem var(--font-mono);
+  color: var(--accent);
+  opacity: 0.85;
+  flex: none;
+}
+.palette__empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--text-1);
+  opacity: 0.5;
+  font: 500 0.85rem var(--font-ui);
+}
+
+/* --------------------------- Context menu ------------------------------- */
+.ctx-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 95000;
+}
+.ctx-menu {
+  position: fixed;
+  z-index: 95001;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--glass-menu-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.6);
+  animation: palette-pop-plain 0.12s ease;
+}
+@keyframes palette-pop-plain {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 11px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-1);
+  font: 500 0.84rem var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+.ctx-item:hover:not(:disabled) {
+  background: rgba(var(--accent-rgb), 0.22);
+}
+.ctx-item--danger:hover:not(:disabled) {
+  background: rgba(220, 60, 40, 0.5);
+}
+.ctx-item:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ctx-glyph {
+  width: 18px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+.ctx-sep {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--glass-border);
+}
+
+/* ----------------------------- Toast stack ------------------------------ */
+.toasts {
+  position: absolute;
+  top: 42px;
+  right: 12px;
+  z-index: 99000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 240px;
+  max-width: 340px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-menu-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 18px rgba(var(--accent-rgb), 0.12);
+  color: var(--text-1);
+  pointer-events: auto;
+  cursor: pointer;
+  animation: toast-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.toast--leaving {
+  animation: toast-out 0.2s ease forwards;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(40px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateX(40px) scale(0.94);
+  }
+}
+.toast__glyph {
+  font-size: 1.3rem;
+  flex: none;
+}
+.toast__title {
+  font: 600 0.84rem var(--font-ui);
+}
+.toast__body {
+  font: 400 0.76rem var(--font-body);
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+/* --------------------------- Boot sequence ------------------------------ */
+.boot {
+  position: absolute;
+  inset: 0;
+  z-index: 200000;
+  background: #02040c;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.45s ease;
+}
+.boot--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+.boot__crawl {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  font: 400 12px/1.7 var(--font-mono);
+  color: var(--ok);
+  text-shadow: 0 0 6px var(--ok-glow);
+  opacity: 0.85;
+}
+.boot__crawl p {
+  margin: 0;
+}
+.boot__logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  animation: boot-bloom 1s cubic-bezier(0.2, 0.9, 0.3, 1.1);
+}
+@keyframes boot-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+.boot__mark {
+  font-size: 56px;
+  color: var(--accent);
+  text-shadow: 0 0 28px rgba(var(--accent-rgb), 0.9), 0 0 60px rgba(var(--accent-rgb), 0.5);
+}
+.boot__name {
+  font: 700 34px var(--font-display);
+  letter-spacing: 0.32em;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.6);
+}
+.boot__sub {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.22em;
+  color: var(--text-2);
+  opacity: 0.7;
+}
+
+/* ---------------------------- Lock screen ------------------------------- */
+.lock {
+  position: absolute;
+  inset: 0;
+  z-index: 150000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(3, 6, 16, 0.55);
+  backdrop-filter: blur(26px) saturate(0.8);
+  cursor: pointer;
+  animation: ov-fade 0.25s ease;
+}
+.lock__time {
+  font: 500 120px var(--font-display);
+  letter-spacing: 6px;
+  color: var(--text-1);
+  text-shadow: 0 0 40px rgba(var(--accent-rgb), 0.45);
+  line-height: 1;
+}
+.lock__date {
+  font: 500 18px var(--font-ui);
+  color: var(--text-2);
+}
+.lock__hint {
+  margin-top: 22px;
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-2);
+  opacity: 0.55;
+  animation: token-pulse 2.2s ease-in-out infinite;
+}
+
+/* ====================== Cube Free-Look (held cube) ======================= */
+/* The Compiz "hold the cube" moment: the desktop floats mid-screen as a
+   see-through glass box you steer. Same glass recipe as the spin, but held
+   persistently; faces are grabbable, windows pop off on Z but stay inert. */
+.cube-viewport--free {
+  pointer-events: auto;
+}
+.cube-viewport--free .cube-face {
+  opacity: 1;
+  transition: none; /* the Free-Look rAF engine owns all motion */
+  transform-style: preserve-3d;
+  cursor: grab;
+  background: var(--cube-glass-fill);
+  box-shadow:
+    inset 0 0 0 1px var(--cube-glass-edge),
+    inset 0 0 90px var(--cube-glass-wash);
+}
+.cube-viewport--free .cube-face:active {
+  cursor: grabbing;
+}
+.cube-viewport--free .cube-face .window {
+  pointer-events: none; /* clicks steer/snap the cube, not the windows */
+}
+/* Blurring a moving 3D layer is costly and pointless — same rule as the spin. */
+.cube-viewport--free .window * {
+  backdrop-filter: none !important;
+}
+/* Free-Look hint chip. */
+.free-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  z-index: 60000;
+  pointer-events: none;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-menu-bg);
+  backdrop-filter: blur(10px);
+  color: var(--text-1);
+  font: 500 0.74rem var(--font-mono);
+  letter-spacing: 0.06em;
+  animation: ov-fade 0.3s ease;
+}
+.free-hint b {
+  color: var(--accent);
+}
+
+/* ===================== Head-tracking parallax ============================ */
+/* The Conky widget counter-drifts against your head (it sits "behind" the
+   windows in depth), and the tray shows a camera dot while tracking is live.
+   --head-x/--head-y are written by the desktop from HeadTrackingService. */
+.conky {
+  transform: translate3d(
+    calc(var(--head-x, 0) * -14px),
+    calc(var(--head-y, 0) * 10px),
+    0
+  );
+}
+.cam-dot {
+  font-size: 0.7rem;
+  opacity: 0.8;
+  filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.8));
+  animation: token-pulse 2.4s ease-in-out infinite;
 }

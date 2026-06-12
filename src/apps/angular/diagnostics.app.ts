@@ -124,7 +124,7 @@ const CORES = 24;
         }
       </div>
       <div class="ticker">
-        <h4>Crypto Feed</h4>
+        <h4>Crypto Feed {{ live() ? '· LIVE' : '· SIM' }}</h4>
         @for (t of tickers(); track t.sym) {
           <div class="tick">
             <span>{{ t.sym }}</span>
@@ -145,12 +145,46 @@ export class DiagnosticsApp implements OnDestroy {
     { sym: 'XMR', price: 172.34 },
     { sym: 'DOT', price: 7.21 },
   ]);
+  readonly live = signal(false);
   private timer: ReturnType<typeof setInterval>;
+  private marketTimer?: ReturnType<typeof setInterval>;
   private seed = 9001;
   private visible = inject(WINDOW_VISIBLE);
+  private static readonly PAIRS: Record<string, string> = {
+    BTC: 'BTCUSDT',
+    ETH: 'ETHUSDT',
+    SOL: 'SOLUSDT',
+    ADA: 'ADAUSDT',
+    XMR: 'XMRUSDT',
+    DOT: 'DOTUSDT',
+  };
 
   constructor() {
     this.timer = setInterval(() => void this.tick(), 600);
+    // Real prices when the market bridge answers; SIM walk otherwise.
+    const pollMarket = async () => {
+      if (!this.visible()) return;
+      const api = window.electronAPI?.market;
+      if (!api) return;
+      try {
+        const res = await api.ticker(Object.values(DiagnosticsApp.PAIRS));
+        if (res.source === 'live') {
+          this.live.set(true);
+          this.tickers.update((ts) =>
+            ts.map((t) => {
+              const p = res.prices[DiagnosticsApp.PAIRS[t.sym]];
+              return p !== undefined ? { ...t, price: p } : t;
+            }),
+          );
+        } else {
+          this.live.set(false);
+        }
+      } catch {
+        this.live.set(false);
+      }
+    };
+    void pollMarket();
+    this.marketTimer = setInterval(() => void pollMarket(), 15_000);
   }
 
   /** One refresh: real per-core CPU from the Electron bridge (cycled onto the 24
@@ -170,10 +204,13 @@ export class DiagnosticsApp implements OnDestroy {
       // Fallback (non-Electron context): synthetic load.
       this.cores.set(Array.from({ length: CORES }, () => Math.floor(this.rand() * 88) + 6));
     }
-    // Crypto prices have no local source — keep the mocked random walk.
-    this.tickers.update((ts) =>
-      ts.map((t) => ({ ...t, price: Math.max(0.01, t.price * (1 + (this.rand() - 0.5) * 0.02)) })),
-    );
+    // SIM random walk only while the live feed isn't answering — the walk
+    // doubles as the visibility-gate probe in the smoke harness.
+    if (!this.live()) {
+      this.tickers.update((ts) =>
+        ts.map((t) => ({ ...t, price: Math.max(0.01, t.price * (1 + (this.rand() - 0.5) * 0.02)) })),
+      );
+    }
   }
 
   /** Deterministic PRNG — Math.random is unavailable in some build/CI envs. */
@@ -192,5 +229,6 @@ export class DiagnosticsApp implements OnDestroy {
 
   ngOnDestroy(): void {
     clearInterval(this.timer);
+    clearInterval(this.marketTimer);
   }
 }
